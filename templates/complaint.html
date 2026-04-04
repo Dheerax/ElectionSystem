@@ -1,0 +1,94 @@
+{% extends "base_voter.html" %}
+{% block title %}Submit Complaint — IEIS{% endblock %}
+{% block content %}
+<div class="voter-layout">
+  <div class="voter-card" style="max-width:520px;">
+    <div class="voter-logo">
+      <div class="voter-logo-icon">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M9 12l2 2 4-4"/>
+          <path d="M21 12c0 4.97-4.03 9-9 9S3 16.97 3 12 7.03 3 12 3s9 4.03 9 9z"/>
+        </svg>
+      </div>
+      IEIS
+    </div>
+
+    <h1 style="font-family:var(--font-display);font-size:22px;font-weight:800;color:var(--text-0);margin-bottom:6px;">Customer Care Support</h1>
+    <p style="font-size:13px;color:var(--text-1);margin-bottom:28px;">Describe your issue and the Customer Care team will investigate promptly. No login required.</p>
+
+    <form method="POST" action="{{ url_for('complaint') }}" enctype="multipart/form-data">
+      <div style="display:flex;flex-direction:column;gap:16px;">
+        <div class="form-group">
+          <label class="form-label" for="c-name">Full Name</label>
+          <input class="form-input" type="text" id="c-name" name="name" placeholder="Your full name" required maxlength="100">
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="c-email">Email Address</label>
+          <input class="form-input" type="email" id="c-email" name="email" placeholder="e.g. john@gmail.com" required maxlength="100">
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="c-roll">Roll Number</label>
+          <input class="form-input" type="text" id="c-roll" name="roll_number" placeholder="e.g. 21CSE045" required maxlength="20">
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="c-desc">Description</label>
+          <textarea class="form-input" id="c-desc" name="description" placeholder="Describe your support case in detail (min. 20 characters)..." required minlength="20" maxlength="1000" rows="5"></textarea>
+        </div>
+
+        <!-- FILE DROPZONE -->
+        <div class="form-group">
+          <label class="form-label">ID Card Upload (optional)</label>
+          <div class="dropzone" id="dropzone" onclick="document.getElementById('file-input').click()">
+            <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="var(--text-2)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="margin:0 auto;display:block;">
+              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+              <polyline points="17 8 12 3 7 8"/>
+              <line x1="12" y1="3" x2="12" y2="15"/>
+            </svg>
+            <p class="dropzone-text" id="dropzone-text">Upload ID Card (optional)</p>
+            <p class="dropzone-sub">PNG, JPG, PDF up to 5MB</p>
+            <p class="dropzone-filename hidden" id="dropzone-filename"></p>
+          </div>
+          <input type="file" id="file-input" name="id_card" accept=".jpg,.jpeg,.png,.pdf" style="display:none;" onchange="handleFile(this)">
+        </div>
+
+        <button type="submit" class="btn-primary w-full" style="margin-top:8px;">
+          Submit Support Case
+        </button>
+
+        <p style="text-align:center;font-size:13px;color:var(--text-2);">
+          <a href="{{ url_for('index') }}" style="color:var(--text-1);">← Back to Home</a>
+        </p>
+      </div>
+    </form>
+  </div>
+</div>
+
+<script>
+function handleFile(input) {
+  var file = input.files[0];
+  if (!file) return;
+  var nameEl = document.getElementById('dropzone-filename');
+  var textEl = document.getElementById('dropzone-text');
+  nameEl.textContent = '📎 ' + file.name;
+  nameEl.classList.remove('hidden');
+  textEl.style.display = 'none';
+}
+
+var dz = document.getElementById('dropzone');
+dz.addEventListener('dragover', function(e) {
+  e.preventDefault();
+  dz.classList.add('dragover');
+});
+dz.addEventListener('dragleave', function() { dz.classList.remove('dragover'); });
+dz.addEventListener('drop', function(e) {
+  e.preventDefault();
+  dz.classList.remove('dragover');
+  var fi = document.getElementById('file-input');
+  fi.files = e.dataTransfer.files;
+  handleFile(fi);
+});
+</script>
+{% endblock %}

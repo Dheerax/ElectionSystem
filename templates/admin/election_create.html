@@ -1,0 +1,174 @@
+{% extends "base_admin.html" %}
+{% block title %}Create Election — IEIS Admin{% endblock %}
+{% block content %}
+
+<div class="page-header" style="margin-bottom:24px;">
+  <div style="display:flex;align-items:center;gap:12px;">
+    <a href="{{ url_for('admin_elections') }}" class="btn-ghost btn-sm" style="padding:4px 8px;">← Back</a>
+    <h1 style="margin:0;">Create New Election</h1>
+  </div>
+  <p style="margin-top:8px;">Configure the election details, eligibility, and candidates in one step.</p>
+</div>
+
+{% with msgs = get_flashed_messages(with_categories=true) %}
+  {% for cat, msg in msgs %}
+    <div class="alert alert-{{ cat }}" style="margin-bottom:16px;padding:10px 14px;border-radius:8px;font-size:13px;">{{ msg }}</div>
+  {% endfor %}
+{% endwith %}
+
+<form id="electionCreateForm" method="POST" action="{{ url_for('admin_election_create') }}" enctype="multipart/form-data">
+  
+  <div style="display:flex;flex-wrap:wrap;gap:24px;">
+    
+    <!-- LEFT COLUMN: Election Info & Eligibility -->
+    <div style="flex:1;min-width:300px;display:flex;flex-direction:column;gap:24px;">
+      
+      <div class="card" style="padding:24px;">
+        <h2 style="font-size:16px;color:var(--text-0);margin-bottom:16px;border-bottom:1px solid var(--border-dim);padding-bottom:12px;">1. Info & Dates</h2>
+        <div style="display:flex;flex-direction:column;gap:14px;">
+          <div class="form-group">
+            <label class="form-label">Election Title <span style="color:var(--danger);">*</span></label>
+            <input class="form-input" type="text" name="election_title" placeholder="e.g. Student Council President 2024" required>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Position / Role</label>
+            <input class="form-input" type="text" name="position_role" placeholder="e.g. President, Vice President (Optional)">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Description / Instructions</label>
+            <textarea class="form-input" name="description" rows="3" placeholder="Tell voters about this election, instructions, passing criteria..."></textarea>
+          </div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+            <div class="form-group">
+              <label class="form-label">Start Date <span style="color:var(--danger);">*</span></label>
+              <input class="form-input" type="date" name="start_date" required>
+            </div>
+            <div class="form-group">
+              <label class="form-label">End Date <span style="color:var(--danger);">*</span></label>
+              <input class="form-input" type="date" name="end_date" required>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card" style="padding:24px;">
+        <h2 style="font-size:16px;color:var(--text-0);margin-bottom:16px;border-bottom:1px solid var(--border-dim);padding-bottom:12px;">2. Voter Eligibility Setup</h2>
+        
+        <div class="form-group">
+          <label class="form-label">Who can vote? <span style="color:var(--danger);">*</span></label>
+          <select class="form-input" name="eligible_type" id="eligibleTypeSelect" onchange="toggleEligibilityFields()" required style="cursor:pointer;">
+            <option value="all">Everyone (All Registered Students)</option>
+            <option value="department">Specific Departments</option>
+            <option value="rolls_manual">Specific Roll Numbers (Manual Entry)</option>
+            <option value="rolls_excel">Specific Roll Numbers (Excel Upload)</option>
+          </select>
+        </div>
+
+        <div id="deptSelection" style="display:none;margin-top:14px;background:rgba(255,255,255,0.02);padding:14px;border-radius:8px;border:1px solid var(--border-dim);">
+          <div style="font-size:13px;color:var(--text-0);margin-bottom:10px;font-weight:600;">Select Eligible Departments:</div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+            {% for code, label in departments %}
+            <label style="display:flex;align-items:center;gap:8px;font-size:13px;color:var(--text-1);cursor:pointer;">
+              <input type="checkbox" name="departments[]" value="{{ code }}">
+              {{ code }}
+            </label>
+            {% endfor %}
+          </div>
+        </div>
+
+        <div id="rollsManualSelection" style="display:none;margin-top:14px;background:rgba(255,255,255,0.02);padding:14px;border-radius:8px;border:1px solid var(--border-dim);">
+          <label class="form-label">Enter Roll Numbers (One per line)</label>
+          <textarea class="form-input" name="rolls_text" rows="4" placeholder="22G01A4321&#10;22G01A4322" style="text-transform:uppercase;"></textarea>
+          <div style="font-size:11px;color:var(--text-2);margin-top:6px;">Only these specific students will be allowed to vote.</div>
+        </div>
+
+        <div id="rollsExcelSelection" style="display:none;margin-top:14px;background:rgba(255,255,255,0.02);padding:14px;border-radius:8px;border:1px solid var(--border-dim);">
+          <label class="form-label">Upload Excel File (.xlsx)</label>
+          <input class="form-input" type="file" name="rolls_excel" accept=".xlsx" style="padding:10px;">
+          <div style="font-size:11px;color:var(--text-2);margin-top:6px;">File must contain a column named exactly <strong>Roll Number</strong>.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- RIGHT COLUMN: Candidates array -->
+    <div style="flex:1.5;min-width:360px;display:flex;flex-direction:column;gap:24px;">
+      
+      <div class="card" style="padding:24px;border-color:rgba(139,92,246,0.2);">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;border-bottom:1px solid var(--border-dim);padding-bottom:12px;">
+          <h2 style="font-size:16px;color:var(--text-0);margin:0;">3. Candidates</h2>
+          <button type="button" class="btn-ghost btn-sm" onclick="addCandidate()">+ Add Candidate</button>
+        </div>
+        
+        <div id="candidatesContainer" style="display:flex;flex-direction:column;gap:16px;">
+          <!-- Candidates will be appended here via JS -->
+        </div>
+
+      </div>
+
+      <div style="text-align:right;">
+        <button type="submit" class="btn-primary" style="padding:14px 24px;font-size:15px;width:100%;">
+          Create Election &amp; Send Announcements
+        </button>
+      </div>
+
+    </div>
+  </div>
+</form>
+
+<script>
+let candidateIdx = 0;
+
+function toggleEligibilityFields() {
+  var val = document.getElementById('eligibleTypeSelect').value;
+  document.getElementById('deptSelection').style.display = (val === 'department') ? 'block' : 'none';
+  document.getElementById('rollsManualSelection').style.display = (val === 'rolls_manual') ? 'block' : 'none';
+  document.getElementById('rollsExcelSelection').style.display = (val === 'rolls_excel') ? 'block' : 'none';
+}
+
+function addCandidate() {
+  const container = document.getElementById('candidatesContainer');
+  const d = document.createElement('div');
+  d.style.border = "1px solid var(--border-dim)";
+  d.style.borderRadius = "8px";
+  d.style.padding = "16px";
+  d.style.background = "rgba(255,255,255,0.015)";
+  d.innerHTML = `
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
+      <div style="font-weight:600;font-size:13px;color:rgba(139,92,246,1);">Candidate Entry</div>
+      <button type="button" class="btn-danger btn-sm" style="padding:4px 8px;" onclick="this.parentElement.parentElement.remove()">Remove</button>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px;">
+      <div class="form-group">
+        <label class="form-label">Full Name <span style="color:var(--danger);">*</span></label>
+        <input class="form-input" type="text" name="candidate_name_${candidateIdx}" required>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Position <span style="color:var(--danger);">*</span></label>
+        <input class="form-input" type="text" name="candidate_position_${candidateIdx}" required>
+      </div>
+    </div>
+    <div class="form-group" style="margin-bottom:12px;">
+      <label class="form-label">Description / Bio</label>
+      <input class="form-input" type="text" name="candidate_desc_${candidateIdx}" placeholder="e.g. Current Secretary of Club">
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+      <div class="form-group">
+        <label class="form-label">Party (Optional)</label>
+        <input class="form-input" type="text" name="candidate_party_${candidateIdx}">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Symbol/Photo</label>
+        <input class="form-input" type="file" name="candidate_symbol_${candidateIdx}" accept="image/*">
+      </div>
+    </div>
+  `;
+  container.appendChild(d);
+  candidateIdx++;
+}
+
+// init
+toggleEligibilityFields();
+addCandidate(); // Add one candidate row by default
+addCandidate(); // Add a second one
+</script>
+{% endblock %}

@@ -1,0 +1,396 @@
+{% extends "base_voter.html" %}
+{% block title %}Register — IEIS{% endblock %}
+{% block content %}
+<div class="reg-layout">
+
+  <!-- LEFT INFO SIDEBAR -->
+  <div class="reg-sidebar">
+    <div class="reg-sidebar-logo">
+      <div class="logo-icon">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9 12l2 2 4-4"/><path d="M21 12c0 4.97-4.03 9-9 9S3 16.97 3 12 7.03 3 12 3s9 4.03 9 9z"/></svg>
+      </div>
+      IEIS
+    </div>
+
+    <div class="reg-sidebar-headline">Register to<br><span style="background:linear-gradient(135deg,#A78BFA,#7C3AED);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;">Vote Securely</span></div>
+    <p class="reg-sidebar-sub">One-time registration for SVPCET students. Your face is used for ArcFace biometric verification — ensuring one genuine vote per person.</p>
+
+    <div class="reg-steps">
+      <div class="reg-step">
+        <div class="reg-step-num">1</div>
+        <div><div class="reg-step-label">Personal Details</div><div class="reg-step-desc">Roll number, name, department, email &amp; phone</div></div>
+      </div>
+      <div class="reg-step">
+        <div class="reg-step-num">2</div>
+        <div><div class="reg-step-label">Face &amp; Password</div><div class="reg-step-desc">Live face capture for ArcFace biometric + set a password</div></div>
+      </div>
+      <div class="reg-step">
+        <div class="reg-step-num">3</div>
+        <div><div class="reg-step-label">Review &amp; Submit</div><div class="reg-step-desc">Confirm your details before finalizing</div></div>
+      </div>
+    </div>
+
+    <div class="reg-security-badges">
+      <div class="security-badge">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+        ArcFace verified
+      </div>
+      <div class="security-badge">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+        Password protected
+      </div>
+      <div class="security-badge">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+        One vote per person
+      </div>
+      <div class="security-badge">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.99 15a19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 3.92 4.08h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L8.09 11a16 16 0 0 0 6.29 6.29l1.08-1.08a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
+        Email confirmed
+      </div>
+    </div>
+  </div>
+
+  <!-- RIGHT FORM PANEL -->
+  <div class="reg-form-panel">
+
+    <div class="voter-logo" style="margin-bottom:24px;">
+      <div class="voter-logo-icon">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9 12l2 2 4-4"/><path d="M21 12c0 4.97-4.03 9-9 9S3 16.97 3 12 7.03 3 12 3s9 4.03 9 9z"/></svg>
+      </div>
+      Voter Registration
+    </div>
+
+    <!-- STEP INDICATOR -->
+    <div class="step-indicator" id="stepIndicator">
+      <div class="step-circle active" id="sc1">1</div>
+      <div class="step-connector" id="conn1"></div>
+      <div class="step-circle" id="sc2">2</div>
+      <div class="step-connector" id="conn2"></div>
+      <div class="step-circle" id="sc3">3</div>
+    </div>
+
+    <!-- STEP 1: DETAILS -->
+    <div class="step-panel active" id="step1">
+      <div style="margin-bottom:20px;">
+        <div style="font-family:var(--font-display);font-size:20px;font-weight:800;color:var(--text-0);margin-bottom:4px;">Personal Details</div>
+        <div style="font-size:13px;color:var(--text-1);">Enter exactly as per your SVPCET enrollment records.</div>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:14px;">
+        <div class="form-group">
+          <label class="form-label">Roll Number <span style="color:var(--danger);">*</span></label>
+          <input class="form-input" id="rollInput" placeholder="E.g. 22G01A4321" autocomplete="off" style="text-transform:uppercase;">
+          <div class="form-error" id="rollErr"></div>
+          <div style="font-size:11px;color:var(--text-2);margin-top:4px;">Format: 22G01A4321 (Year + G01A + Department + Serial)</div>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Full Name <span style="color:var(--danger);">*</span></label>
+          <input class="form-input" id="nameInput" placeholder="As per enrollment record">
+          <div class="form-error" id="nameErr"></div>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Department <span style="color:var(--danger);">*</span></label>
+          <select class="form-input" id="deptInput" style="cursor:pointer;">
+            <option value="">Select your department</option>
+            {% for code, label in departments %}
+            <option value="{{ code }}">{{ label }}</option>
+            {% endfor %}
+          </select>
+          <div class="form-error" id="deptErr"></div>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+          <div class="form-group">
+            <label class="form-label">Email Address <span style="color:var(--danger);">*</span></label>
+            <input class="form-input" id="emailInput" type="email" placeholder="yourname@email.com">
+            <div class="form-error" id="emailErr"></div>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Phone Number <span style="color:var(--danger);">*</span></label>
+            <input class="form-input" id="phoneInput" type="tel" placeholder="10-digit mobile" maxlength="10">
+            <div class="form-error" id="phoneErr"></div>
+          </div>
+        </div>
+      </div>
+      <div class="info-callout" style="margin-top:16px;">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
+        <div>Your roll number must already be added by the administrator. If it's missing, please <a href="/complaint" style="color:var(--accent);text-decoration:underline;">contact customer care</a>.</div>
+      </div>
+      <button class="btn-primary w-full" style="margin-top:16px;" onclick="validateStep1()">
+        Continue to Face &amp; Password
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
+      </button>
+      <div style="text-align:center;margin-top:16px;">
+        <a href="{{ url_for('voter_login') }}" style="font-size:13px;color:var(--text-2);">Already registered? <span style="color:var(--accent);">Sign in</span></a>
+      </div>
+    </div>
+
+    <!-- STEP 2: WEBCAM + PASSWORD -->
+    <div class="step-panel" id="step2">
+      <div style="margin-bottom:16px;">
+        <div style="font-family:var(--font-display);font-size:20px;font-weight:800;color:var(--text-0);margin-bottom:4px;">Face Capture &amp; Password</div>
+        <div style="font-size:13px;color:var(--text-1);">Your face will be stored as an ArcFace biometric for identity verification during voting.</div>
+      </div>
+      <div class="webcam-box" id="webcamBox">
+        <video id="webcamVideo" autoplay playsinline style="display:none;"></video>
+        <canvas id="webcamCanvas" style="display:none;"></canvas>
+        <img id="capturedImg" style="display:none;">
+        <div class="webcam-placeholder" id="webcamPlaceholder">
+          <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="var(--text-2)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
+          <p style="margin-top:10px;font-size:13px;">Camera preview appears here</p>
+          <p style="font-size:11px;color:var(--text-2);margin-top:4px;">Ensure your face is clearly visible and well-lit</p>
+        </div>
+      </div>
+      <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:10px;">
+        <button class="btn-ghost" style="flex:1;" id="startCamBtn" onclick="startCam()">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 7l-7 5 7 5V7z"/><rect x="1" y="5" width="15" height="14" rx="2" ry="2"/></svg>
+          Start Camera
+        </button>
+        <button class="btn-primary" style="flex:1;" id="captureBtn" onclick="capturePhoto()" disabled>
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
+          Capture Face
+        </button>
+        <button class="btn-ghost" style="flex:1;display:none;" id="retakeBtn" onclick="retakePhoto()">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 .49-5.1"/></svg>
+          Retake
+        </button>
+      </div>
+      <div class="form-error" id="photoErr" style="margin-top:8px;"></div>
+
+      <!-- Password fields -->
+      <div style="margin-top:20px;display:flex;flex-direction:column;gap:12px;">
+        <div class="form-group">
+          <label class="form-label">Create Password <span style="color:var(--danger);">*</span></label>
+          <input class="form-input" type="password" id="passInput" placeholder="Minimum 6 characters">
+          <div class="form-error" id="passErr"></div>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Confirm Password <span style="color:var(--danger);">*</span></label>
+          <input class="form-input" type="password" id="pass2Input" placeholder="Repeat your password">
+          <div class="form-error" id="pass2Err"></div>
+        </div>
+      </div>
+
+      <div style="display:flex;gap:10px;margin-top:20px;">
+        <button class="btn-ghost" onclick="goStep(1)" style="flex:1;">← Back</button>
+        <button class="btn-primary" onclick="proceedFromStep2()" style="flex:2;">
+          Review Details
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
+        </button>
+      </div>
+    </div>
+
+    <!-- STEP 3: REVIEW -->
+    <div class="step-panel" id="step3">
+      <div style="margin-bottom:20px;">
+        <div style="font-family:var(--font-display);font-size:20px;font-weight:800;color:var(--text-0);margin-bottom:4px;">Review &amp; Confirm</div>
+        <div style="font-size:13px;color:var(--text-1);">Double-check before submitting — you cannot change details after registration.</div>
+      </div>
+
+      <div class="voter-id-card" style="margin-bottom:20px;">
+        <img id="reviewPhoto" src="" class="voter-id-photo" alt="Photo">
+        <div>
+          <div class="voter-id-name" id="reviewName">—</div>
+          <div class="voter-id-roll" id="reviewRoll">—</div>
+          <div class="voter-id-dept" id="reviewDept">—</div>
+          <div class="voter-id-dept" id="reviewEmail">—</div>
+          <div class="voter-id-dept" id="reviewPhone">—</div>
+        </div>
+      </div>
+
+      <!-- Face confirmation indicator -->
+      <div id="faceConfirm" style="display:flex;align-items:center;gap:8px;padding:10px 14px;background:rgba(16,185,129,0.1);border:1px solid rgba(16,185,129,0.3);border-radius:8px;margin-bottom:16px;">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#10b981" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+        <span style="font-size:13px;color:#10b981;font-weight:600;">Face captured — ArcFace biometric will be stored securely</span>
+      </div>
+
+      <div class="warn-callout">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+        <div>By submitting you confirm all details are correct. This action cannot be undone.</div>
+      </div>
+
+      <div id="submitError" class="form-error" style="margin-bottom:12px;font-size:13px;"></div>
+
+      <div style="display:flex;gap:10px;">
+        <button class="btn-ghost" onclick="goStep(2)" style="flex:1;">← Back</button>
+        <button class="btn-primary" id="submitBtn" onclick="submitReg()" style="flex:2;">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+          Complete Registration
+        </button>
+      </div>
+    </div>
+
+  </div><!-- end reg-form-panel -->
+</div><!-- end reg-layout -->
+
+<script>
+var currentStep = 1;
+var photoData = '';
+var stream = null;
+
+function goStep(n) {
+  document.getElementById('step' + currentStep).classList.remove('active');
+  currentStep = n;
+  document.getElementById('step' + currentStep).classList.add('active');
+  for (var i = 1; i <= 3; i++) {
+    var c = document.getElementById('sc' + i);
+    c.classList.remove('active', 'done');
+    if (i < currentStep)      { c.classList.add('done'); c.textContent = '✓'; }
+    else if (i === currentStep){ c.classList.add('active'); c.textContent = i; }
+    else                       { c.textContent = i; }
+  }
+  for (var j = 1; j <= 2; j++) {
+    document.getElementById('conn' + j).classList.toggle('done', j < currentStep);
+  }
+}
+
+function setErr(id, msg) { document.getElementById(id).textContent = msg; }
+function clearErrs() {
+  ['rollErr','nameErr','deptErr','emailErr','phoneErr','passErr','pass2Err','photoErr'].forEach(function(id){
+    document.getElementById(id).textContent = '';
+  });
+}
+
+async function validateStep1() {
+  clearErrs();
+  var btn = document.querySelector('#step1 .btn-primary');
+  btn.disabled = true;
+  btn.innerHTML = 'Verifying...';
+
+  var roll  = document.getElementById('rollInput').value.trim().toUpperCase();
+  var name  = document.getElementById('nameInput').value.trim();
+  var dept  = document.getElementById('deptInput').value;
+  var email = document.getElementById('emailInput').value.trim().toLowerCase();
+  var phone = document.getElementById('phoneInput').value.trim();
+  var ok = true;
+
+  if (!/^\d{2}G01A\d{4}$/i.test(roll))  { setErr('rollErr',  'Format: 22G01A4321 (SVPCET roll number)'); ok = false; }
+  if (!/^[A-Za-z ]+$/.test(name)||!name) { setErr('nameErr',  'Letters and spaces only'); ok = false; }
+  if (!dept)                              { setErr('deptErr',  'Please select your department'); ok = false; }
+  if (!email || !email.includes('@'))     { setErr('emailErr', 'Enter a valid email address'); ok = false; }
+  if (!/^\d{10}$/.test(phone))           { setErr('phoneErr', '10-digit number only'); ok = false; }
+
+  if (!ok) {
+    btn.disabled = false;
+    btn.innerHTML = 'Continue to Face &amp; Password <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>';
+    return;
+  }
+
+  try {
+    const res = await fetch('/api/verify_voter', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({ roll_number: roll, name: name, department: dept, email: email, phone: phone })
+    });
+    const data = await res.json();
+    
+    if (res.ok && data.success) {
+      goStep(2);
+    } else {
+      setErr('rollErr', data.error || 'Verification failed. Check your details.');
+    }
+  } catch (err) {
+    setErr('rollErr', 'Network error. Could not verify details.');
+  }
+
+  btn.disabled = false;
+  btn.innerHTML = 'Continue to Face &amp; Password <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>';
+}
+
+function startCam() {
+  navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user', width: { ideal: 640 }, height: { ideal: 480 } }, audio: false })
+    .then(function(s) {
+      stream = s;
+      var vid = document.getElementById('webcamVideo');
+      vid.srcObject = s;
+      vid.style.display = 'block';
+      document.getElementById('webcamPlaceholder').style.display = 'none';
+      document.getElementById('captureBtn').disabled = false;
+      document.getElementById('startCamBtn').disabled = true;
+    })
+    .catch(function() { setErr('photoErr', 'Camera access denied. Please allow camera access in your browser settings and retry.'); });
+}
+
+function capturePhoto() {
+  var vid    = document.getElementById('webcamVideo');
+  var canvas = document.getElementById('webcamCanvas');
+  canvas.width = vid.videoWidth; canvas.height = vid.videoHeight;
+  canvas.getContext('2d').drawImage(vid, 0, 0);
+  photoData = canvas.toDataURL('image/jpeg', 0.85);
+  var img = document.getElementById('capturedImg');
+  img.src = photoData; img.style.display = 'block';
+  vid.style.display = 'none';
+  document.getElementById('retakeBtn').style.display = 'inline-flex';
+  document.getElementById('captureBtn').disabled = true;
+  if (stream) { stream.getTracks().forEach(function(t){ t.stop(); }); stream = null; }
+  setErr('photoErr', '');
+}
+
+function retakePhoto() {
+  photoData = '';
+  document.getElementById('capturedImg').style.display = 'none';
+  document.getElementById('retakeBtn').style.display = 'none';
+  document.getElementById('captureBtn').disabled = false;
+  document.getElementById('startCamBtn').disabled = false;
+  startCam();
+}
+
+function proceedFromStep2() {
+  clearErrs();
+  var pass  = document.getElementById('passInput').value;
+  var pass2 = document.getElementById('pass2Input').value;
+  var ok    = true;
+
+  if (!photoData) { setErr('photoErr', 'Please capture your face photo first.'); ok = false; }
+  if (pass.length < 6) { setErr('passErr', 'Password must be at least 6 characters'); ok = false; }
+  if (pass !== pass2)  { setErr('pass2Err', 'Passwords do not match'); ok = false; }
+
+  if (!ok) return;
+
+  // Populate review card
+  document.getElementById('reviewPhoto').src   = photoData;
+  document.getElementById('reviewName').textContent  = document.getElementById('nameInput').value.trim();
+  document.getElementById('reviewRoll').textContent  = document.getElementById('rollInput').value.trim().toUpperCase();
+  var deptSelect = document.getElementById('deptInput');
+  document.getElementById('reviewDept').textContent  = deptSelect.options[deptSelect.selectedIndex].text;
+  document.getElementById('reviewEmail').textContent = document.getElementById('emailInput').value.trim();
+  document.getElementById('reviewPhone').textContent = document.getElementById('phoneInput').value.trim();
+  goStep(3);
+}
+
+function submitReg() {
+  var btn = document.getElementById('submitBtn');
+  btn.disabled = true;
+  btn.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0z" stroke-dasharray="50" stroke-dashoffset="0"><animateTransform attributeName="transform" type="rotate" from="0 12 12" to="360 12 12" dur="0.7s" repeatCount="indefinite"/></path></svg> Submitting…';
+  document.getElementById('submitError').textContent = '';
+
+  var deptSelect = document.getElementById('deptInput');
+  fetch('/register', {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({
+      roll_number: document.getElementById('rollInput').value.trim().toUpperCase(),
+      name:        document.getElementById('nameInput').value.trim(),
+      department:  deptSelect.value,
+      email:       document.getElementById('emailInput').value.trim().toLowerCase(),
+      phone:       document.getElementById('phoneInput').value.trim(),
+      photo:       photoData,
+      password:    document.getElementById('passInput').value,
+    })
+  })
+  .then(function(r){ return r.json().then(function(d){ return {ok:r.ok, d:d}; }); })
+  .then(function(res) {
+    if (res.ok && res.d.success) {
+      window.location.href = res.d.redirect || '/voter/login';
+    } else {
+      document.getElementById('submitError').textContent = res.d.error || 'Something went wrong. Please try again.';
+      btn.disabled = false;
+      btn.innerHTML = '↩ Try Again';
+    }
+  })
+  .catch(function() {
+    document.getElementById('submitError').textContent = 'Network error. Please check your connection.';
+    btn.disabled = false;
+    btn.innerHTML = '↩ Retry';
+  });
+}
+</script>
+{% endblock %}

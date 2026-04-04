@@ -1,0 +1,65 @@
+{% extends "base_care.html" %}
+{% block title %}Dashboard — Customer Care{% endblock %}
+{% block content %}
+<div class="page-header">
+  <h1>Customer Care Console</h1>
+  <p>Review and resolve support requests from voters.</p>
+</div>
+
+<!-- FILTERS -->
+<div class="filter-tabs">
+  {% for s in ['all', 'pending', 'resolved', 'rejected'] %}
+  <a href="{{ url_for('care_dashboard', status=s) }}"
+     class="filter-tab {% if status_filter == s %}active{% endif %}">
+    {{ s|capitalize }}
+  </a>
+  {% endfor %}
+</div>
+
+<div class="table-wrap">
+  {% if complaints %}
+  <table class="data-table">
+    <thead>
+      <tr>
+        <th>Ticket #</th>
+        <th>Voter Name</th>
+        <th>Roll Number</th>
+        <th>Description</th>
+        <th>Status</th>
+        <th>Actions</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for c in complaints %}
+      <tr>
+        <td class="mono">TKT-{{ c.complaint_id }}</td>
+        <td style="color:var(--text-0);">{{ c.name }}</td>
+        <td class="mono">{{ c.roll_number }}</td>
+        <td style="font-size:13px;">{{ c.description[:60] }}{% if c.description|length > 60 %}…{% endif %}</td>
+        <td>
+          {% if c.status == 'pending' %}
+            <span class="badge badge-pending">Pending</span>
+          {% elif c.status == 'resolved' %}
+            <span class="badge badge-resolved">Resolved</span>
+          {% else %}
+            <span class="badge badge-rejected">Closed</span>
+          {% endif %}
+        </td>
+        <td>
+          <a href="{{ url_for('care_complaint_detail', complaint_id=c.complaint_id) }}" class="btn-ghost btn-sm">
+            Review
+          </a>
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  {% else %}
+  <div class="empty-state">
+    <div class="empty-state-icon">📬</div>
+    <div class="empty-state-title">No support tickets found</div>
+    <p>{% if status_filter != 'all' %}No {{ status_filter }} tickets currently in the queue.{% else %}Great! Your support queue is completely empty.{% endif %}</p>
+  </div>
+  {% endif %}
+</div>
+{% endblock %}

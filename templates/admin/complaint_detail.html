@@ -1,0 +1,143 @@
+{% extends "base_admin.html" %}
+{% block title %}Complaint #{{ complaint.complaint_id }} — IEIS Admin{% endblock %}
+{% block content %}
+<div class="page-header">
+  <div style="display:flex;align-items:center;gap:12px;">
+    <a href="{{ url_for('admin_complaints') }}" class="btn-ghost btn-sm">← Back</a>
+    <div>
+      <h1>Complaint #{{ complaint.complaint_id }}</h1>
+      <p>
+        Submitted by {{ complaint.name }} ({{ complaint.roll_number }})&nbsp;
+        {% if complaint.status == 'pending' %}
+          <span class="badge badge-pending">Pending</span>
+        {% elif complaint.status == 'resolved' %}
+          <span class="badge badge-resolved">Resolved</span>
+        {% else %}
+          <span class="badge badge-rejected">Rejected</span>
+        {% endif %}
+      </p>
+    </div>
+  </div>
+</div>
+
+<div class="complaint-detail-grid">
+  <!-- LEFT: COMPLAINT + ACTIONS -->
+  <div>
+    <!-- COMPLAINT DETAILS -->
+    <div class="card" style="margin-bottom:20px;">
+      <h2 style="font-family:var(--font-display);font-size:16px;font-weight:700;margin-bottom:14px;color:var(--text-0);">Complaint Details</h2>
+
+      <div class="review-field" style="margin-bottom:10px;">
+        <span class="review-field-label">Name</span>
+        <span class="review-field-value">{{ complaint.name }}</span>
+      </div>
+      <div class="review-field" style="margin-bottom:10px;">
+        <span class="review-field-label">Roll</span>
+        <span class="review-field-value">{{ complaint.roll_number }}</span>
+      </div>
+
+      <div class="form-group" style="margin-top:12px;">
+        <label class="form-label">Description</label>
+        <div style="background:var(--bg-2);border:1px solid var(--border);border-radius:var(--radius-sm);padding:14px;font-size:14px;color:var(--text-1);line-height:1.7;">
+          {{ complaint.description }}
+        </div>
+      </div>
+
+      {% if complaint.id_card_path %}
+      <div style="margin-top:16px;">
+        <label class="form-label">Attached ID Card</label>
+        <div class="id-card-preview" style="margin-top:8px;">
+          {% set ext = complaint.id_card_path.split('.')[-1].lower() %}
+          {% if ext in ['jpg','jpeg','png'] %}
+            <img src="{{ url_for('static', filename=complaint.id_card_path) }}" alt="ID Card">
+          {% else %}
+            <div style="padding:16px;text-align:center;color:var(--text-1);">
+              <a href="{{ url_for('static', filename=complaint.id_card_path) }}" target="_blank" class="btn-ghost btn-sm">
+                📄 View PDF
+              </a>
+            </div>
+          {% endif %}
+        </div>
+      </div>
+      {% endif %}
+    </div>
+
+    <!-- ACTIONS — only if pending -->
+    {% if complaint.status == 'pending' %}
+    <div class="card" style="margin-bottom:20px;">
+      <h2 style="font-family:var(--font-display);font-size:16px;font-weight:700;margin-bottom:14px;color:var(--text-0);">Update Voter & Resolve</h2>
+      <p style="font-size:13px;color:var(--text-1);margin-bottom:16px;">Leave fields blank to keep existing values. Filled fields will be updated.</p>
+
+      <form method="POST" action="{{ url_for('admin_complaint_resolve', complaint_id=complaint.complaint_id) }}"
+            style="display:flex;flex-direction:column;gap:14px;">
+        <div class="form-group">
+          <label class="form-label">New Name</label>
+          <input class="form-input" type="text" name="new_name"
+                 placeholder="{{ voter.name if voter else 'No voter record found' }}" value="">
+        </div>
+        <div class="form-group">
+          <label class="form-label">New Email</label>
+          <input class="form-input" type="email" name="new_email"
+                 placeholder="{{ voter.email if voter and voter.email else 'No email on record' }}">
+        </div>
+        <div class="form-group">
+          <label class="form-label">New Phone</label>
+          <input class="form-input" type="text" name="new_phone"
+                 placeholder="{{ voter.phone if voter and voter.phone else 'No phone on record' }}">
+        </div>
+
+        <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:4px;">
+          <button type="submit" class="btn-success">✓ Approve & Update Voter</button>
+          <button type="submit" name="new_name" value="" class="btn-ghost">Approve (No Changes)</button>
+        </div>
+      </form>
+    </div>
+
+    <form method="POST" action="{{ url_for('admin_complaint_reject', complaint_id=complaint.complaint_id) }}"
+          onsubmit="return confirm('Reject this complaint?');">
+      <button type="submit" class="btn-danger">✗ Reject Complaint</button>
+    </form>
+    {% else %}
+    <div class="card" style="text-align:center;color:var(--text-2);">
+      This complaint has been <strong style="color:var(--text-1);">{{ complaint.status }}</strong>.
+    </div>
+    {% endif %}
+  </div>
+
+  <!-- RIGHT: VOTER RECORD -->
+  <div>
+    <div class="card">
+      <h2 style="font-family:var(--font-display);font-size:16px;font-weight:700;margin-bottom:14px;color:var(--text-0);">Voter Record</h2>
+      {% if voter %}
+        {% if voter.photo %}
+        <img src="{{ voter.photo }}" alt="Voter Photo"
+             style="width:64px;height:64px;border-radius:50%;object-fit:cover;border:2px solid var(--border-hi);margin-bottom:16px;">
+        {% endif %}
+        <div style="display:flex;flex-direction:column;gap:8px;">
+          {% for label, val in [('Roll', voter.roll_number), ('Name', voter.name), ('Dept', voter.department), ('Email', voter.email or '—'), ('Phone', voter.phone or '—')] %}
+          <div style="display:flex;gap:10px;padding:8px 0;border-bottom:1px solid var(--border);">
+            <span style="min-width:60px;font-size:11px;font-weight:600;letter-spacing:0.05em;text-transform:uppercase;color:var(--text-2);">{{ label }}</span>
+            <span style="font-family:var(--font-mono);font-size:13px;color:var(--text-0);">{{ val }}</span>
+          </div>
+          {% endfor %}
+        </div>
+        <div style="margin-top:14px;display:flex;gap:8px;">
+          {% if voter.is_registered %}
+            <span class="badge badge-active">Registered</span>
+          {% else %}
+            <span class="badge badge-pending">Unregistered</span>
+          {% endif %}
+          {% if voter.has_voted %}
+            <span class="badge badge-resolved">Voted</span>
+          {% endif %}
+        </div>
+      {% else %}
+        <div class="empty-state" style="padding:24px;">
+          <div class="empty-state-icon">❓</div>
+          <p style="color:var(--text-2);font-size:13px;">No voter record for roll <strong>{{ complaint.roll_number }}</strong></p>
+        </div>
+      {% endif %}
+    </div>
+  </div>
+</div>
+{% endblock %}

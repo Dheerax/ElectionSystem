@@ -1,0 +1,36 @@
+{% extends "base_voter.html" %}
+{% block title %}Admin Login — IEIS{% endblock %}
+{% block content %}
+<div class="admin-login-page">
+  <div class="admin-login-card">
+    <div class="admin-login-logo">
+      <div class="logo-icon">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M9 12l2 2 4-4"/>
+          <path d="M21 12c0 4.97-4.03 9-9 9S3 16.97 3 12 7.03 3 12 3s9 4.03 9 9z"/>
+        </svg>
+      </div>
+      IEIS Admin
+    </div>
+    <p class="admin-login-sub">Sign in to access the election administration panel.</p>
+
+    <form method="POST" action="{{ url_for('admin_login') }}" style="display:flex;flex-direction:column;gap:16px;">
+      <div class="form-group">
+        <label class="form-label" for="username">Username</label>
+        <input class="form-input" type="text" id="username" name="username" placeholder="admin" required autocomplete="username">
+      </div>
+      <div class="form-group">
+        <label class="form-label" for="password">Password</label>
+        <input class="form-input" type="password" id="password" name="password" placeholder="••••••••" required autocomplete="current-password">
+      </div>
+      <button type="submit" class="btn-primary w-full" style="margin-top:8px;">
+        Sign In
+      </button>
+    </form>
+
+    <p style="margin-top:20px;text-align:center;font-size:13px;color:var(--text-2);">
+      <a href="{{ url_for('index') }}" style="color:var(--text-1);">← Back to home</a>
+    </p>
+  </div>
+</div>
+{% endblock %}

@@ -1,0 +1,128 @@
+{% extends "base_care.html" %}
+{% block title %}Ticket #{{ complaint.complaint_id }} — Customer Care{% endblock %}
+{% block content %}
+
+<div style="margin-bottom:24px;">
+  <a href="{{ url_for('care_dashboard') }}" class="btn-ghost btn-sm">← Back to Dashboard</a>
+</div>
+
+<div class="card">
+<div class="page-header">
+  <div class="flex justify-between items-start">
+    <div>
+      <h1>Support Ticket #{{ complaint.complaint_id }}</h1>
+      <p>Submitted by <strong class="text-0">{{ complaint.name }}</strong> ({{ complaint.roll_number }})</p>
+    </div>
+    <div>
+      {% if complaint.status == 'pending' %}
+        <span class="badge badge-pending">Awaiting Action</span>
+      {% elif complaint.status == 'resolved' %}
+        <span class="badge badge-resolved">Resolved</span>
+      {% else %}
+        <span class="badge badge-rejected">Closed</span>
+      {% endif %}
+    </div>
+  </div>
+</div>
+
+  <div class="dashboard-grid">
+    <!-- LEFT: COMPLAINT DETAILS & REPLY -->
+    <div class="dashboard-col">
+      <div class="mb-24">
+        <label class="form-label mb-16">User Description</label>
+        <div class="card" style="background:var(--bg-1); padding: 20px; font-size: 15px;">
+          {{ complaint.description }}
+        </div>
+      </div>
+
+      {% if complaint.status == 'pending' %}
+        <div class="card" style="border-color: var(--accent-border);">
+          <h3 class="mb-16">Compose Email Reply & Resolve</h3>
+          <p class="text-muted text-sm mb-16">This message will be emailed directly to <strong>{{ complaint.email or voter.email or 'N/A (No Email Provided)' }}</strong> when you resolve or reject this ticket.</p>
+          
+          <!-- RESOLVE FORM -->
+          <form method="POST" action="{{ url_for('care_complaint_resolve', complaint_id=complaint.complaint_id) }}" id="resolveForm">
+            <div class="form-group mb-16">
+              <textarea class="form-input" name="admin_response" placeholder="Type your reply to the voter here..." rows="4" required></textarea>
+            </div>
+            
+            <h4 class="text-sm mb-16 mt-24" style="border-top: 1px solid var(--border); padding-top: 16px;">Update Voter Records (Optional)</h4>
+            <div class="flex gap-12 mb-24">
+              <div class="form-group w-full">
+                <label class="form-label">Correct Name</label>
+                <input class="form-input" type="text" name="new_name" placeholder="If incorrect...">
+              </div>
+              <div class="form-group w-full">
+                <label class="form-label">Correct Email</label>
+                <input class="form-input" type="email" name="new_email" placeholder="If incorrect..." value="{{ complaint.email or '' }}">
+              </div>
+            </div>
+
+            <div class="flex gap-12">
+              <button type="submit" class="btn-primary w-full">Resolve & Send Email</button>
+              <button type="button" class="btn-danger w-full" onclick="document.getElementById('rejectForm').submit();">Reject Ticket</button>
+            </div>
+          </form>
+
+          <!-- HIDDEN REJECT FORM -->
+          <form method="POST" action="{{ url_for('care_complaint_reject', complaint_id=complaint.complaint_id) }}" id="rejectForm" style="display:none;">
+            <!-- Copies the admin response text via JS -->
+            <input type="hidden" name="admin_response" id="rejectResponse">
+          </form>
+
+          <script>
+            // Ensure the rejection form gets the typed admin response before submission
+            document.getElementById('rejectForm').addEventListener('submit', function(e) {
+              document.getElementById('rejectResponse').value = document.querySelector('textarea[name="admin_response"]').value;
+              if(!document.getElementById('rejectResponse').value) {
+                e.preventDefault();
+                alert('Please type an email reply before rejecting.');
+              }
+            });
+          </script>
+        </div>
+      {% else %}
+        <div class="mb-24">
+          <label class="form-label mb-16">Care Staff Reply (Sent)</label>
+          <div class="card" style="background:var(--bg-1); color:var(--accent); font-size:15px; padding: 20px;">
+            {{ complaint.admin_response or 'No written reply provided.' }}
+          </div>
+        </div>
+      {% endif %}
+    </div>
+
+    <!-- RIGHT: EVIDENCE & METADATA -->
+    <div class="dashboard-col">
+      <label class="form-label mb-16">Evidence Provided</label>
+      {% if complaint.id_card_path %}
+        <div class="id-card-preview mb-24">
+          <img src="{{ url_for('static', filename=complaint.id_card_path) }}" alt="Provided ID Card">
+        </div>
+      {% else %}
+        <div class="card text-center text-dim text-sm mb-24" style="border-style: dashed; padding: 20px;">
+          No ID Card evidence uploaded.
+        </div>
+      {% endif %}
+
+      <div class="card" style="padding: 16px;">
+        <h4 class="text-sm mb-16">Contact Info Collected</h4>
+        <div class="text-sm text-muted mb-8"><strong>Email:</strong> <span class="text-0">{{ complaint.email or 'None Provided' }}</span></div>
+        
+        <div class="divider"></div>
+        
+        <h4 class="text-sm mb-16">Database Record</h4>
+        {% if voter %}
+          <div class="text-sm text-muted mb-8"><strong>Name:</strong> <span class="text-0">{{ voter.name }}</span></div>
+          <div class="text-sm text-muted mb-8"><strong>Email:</strong> <span class="text-0">{{ voter.email or '—' }}</span></div>
+          <div class="text-sm text-muted mb-8"><strong>Phone:</strong> <span class="text-0">{{ voter.phone or '—' }}</span></div>
+          <div class="text-sm text-muted"><strong>Status:</strong> 
+            {% if voter.is_registered %}<span class="text-success">Registered</span>{% else %}<span class="text-danger">Pending</span>{% endif %}
+          </div>
+        {% else %}
+          <div class="text-danger text-sm">Roll Number {{ complaint.roll_number }} missing from DB.</div>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

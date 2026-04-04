@@ -1,0 +1,181 @@
+{% extends "base_admin.html" %}
+{% block title %}Voters — IEIS Admin{% endblock %}
+{% block content %}
+<div class="page-header">
+  <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:16px;">
+    <div>
+      <h1>Voter Management</h1>
+      <p>Add, search, and manage registered voters. Total: {{ total }}</p>
+    </div>
+    <div style="display:flex;gap:12px;">
+      <button class="btn-primary" onclick="document.getElementById('modal-add').classList.add('open')">
+        + Add Voter
+      </button>
+      <button class="btn-ghost" onclick="document.getElementById('modal-csv').classList.add('open')">
+        Upload CSV
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- FILTER & SEARCH -->
+<div class="card" style="margin-bottom:24px;display:flex;flex-wrap:wrap;gap:16px;justify-content:space-between;align-items:center;">
+  <form method="GET" action="{{ url_for('admin_voters') }}" class="search-bar" style="margin:0;flex:1;min-width:280px;">
+    <input type="hidden" name="dept" value="{{ dept }}">
+    <input class="form-input" type="text" name="q" value="{{ q }}" placeholder="Search by roll number or name..." style="max-width:320px;">
+    <button type="submit" class="btn-primary btn-sm">Search</button>
+    {% if q %}<a href="{{ url_for('admin_voters', dept=dept) }}" class="btn-ghost btn-sm">Clear</a>{% endif %}
+  </form>
+
+  <div style="display:flex;gap:8px;align-items:center;">
+    <span style="font-size:13px;color:var(--text-2);font-weight:600;">Filter by Department:</span>
+    <select class="form-input" style="width:auto;min-width:180px;" onchange="window.location.href='{{ url_for('admin_voters', q=q) }}&dept=' + this.value">
+      <option value="all" {% if dept == 'all' %}selected{% endif %}>All Departments</option>
+      {% for d in departments %}
+        <option value="{{ d }}" {% if dept == d %}selected{% endif %}>{{ d }}</option>
+      {% endfor %}
+    </select>
+  </div>
+</div>
+
+<!-- CLUSTERED VOTER LIST -->
+{% if voters %}
+  
+  {% for department_name, dept_voters in voters|groupby('department') %}
+    <div class="card" style="margin-bottom:24px;padding:0;overflow:hidden;border:1px solid rgba(255,255,255,0.08);">
+      
+      <!-- Department Header -->
+      <div style="background:var(--bg-3);padding:16px 20px;border-bottom:1px solid rgba(255,255,255,0.05);display:flex;justify-content:space-between;align-items:center;">
+        <h2 style="font-family:var(--font-display);font-size:16px;font-weight:600;color:var(--text-0);margin:0;">
+          {{ department_name or 'No Department' }}
+        </h2>
+        <span class="badge" style="background:rgba(255,255,255,0.1);color:var(--text-1);">
+          {{ dept_voters|length }} Voter{% if dept_voters|length != 1 %}s{% endif %}
+        </span>
+      </div>
+
+      <!-- Department Voters Table -->
+      <div class="table-wrap" style="margin:0;border:none;">
+        <table class="data-table" style="margin:0;border:none;">
+          <thead>
+            <tr>
+              <th>Roll Number</th>
+              <th>Name</th>
+              <th>Status</th>
+              <th>Voting</th>
+              <th style="text-align:right;">Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for v in dept_voters %}
+            <tr>
+              <td class="mono" style="font-weight:500;">{{ v.roll_number }}</td>
+              <td style="color:var(--text-0);">{{ v.name }}</td>
+              <td>
+                {% if v.is_registered %}
+                  <span class="badge badge-active">Registered</span>
+                {% else %}
+                  <span class="badge badge-pending">Pending</span>
+                {% endif %}
+              </td>
+              <td>
+                {% if v.has_voted %}
+                  <span class="badge badge-resolved">Voted</span>
+                {% else %}
+                  <span class="badge badge-ended">Not Voted</span>
+                {% endif %}
+              </td>
+              <td style="text-align:right;">
+                <form method="POST" action="{{ url_for('admin_voter_delete', voter_id=v.voter_id) }}"
+                      onsubmit="return confirm('Delete voter {{ v.roll_number }}? This cannot be undone.');" style="display:inline-block;margin:0;">
+                  <button type="submit" class="btn-danger btn-sm" style="padding:4px 8px;font-size:11px;">Delete</button>
+                </form>
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+
+    </div>
+  {% endfor %}
+
+  <!-- PAGINATION -->
+  {% if total_pages > 1 %}
+  <div class="pagination" style="margin-top:0;">
+    {% if page > 1 %}
+      <a href="{{ url_for('admin_voters', page=page-1, q=q, dept=dept) }}" class="page-btn">‹</a>
+    {% else %}
+      <span class="page-btn disabled">‹</span>
+    {% endif %}
+
+    {% for p in range(1, total_pages+1) %}
+      <a href="{{ url_for('admin_voters', page=p, q=q, dept=dept) }}"
+         class="page-btn {% if p == page %}active{% endif %}">{{ p }}</a>
+    {% endfor %}
+
+    {% if page < total_pages %}
+      <a href="{{ url_for('admin_voters', page=page+1, q=q, dept=dept) }}" class="page-btn">›</a>
+    {% else %}
+      <span class="page-btn disabled">›</span>
+    {% endif %}
+  </div>
+  {% endif %}
+
+{% else %}
+<div class="empty-state">
+  <div class="empty-state-icon">👥</div>
+  <div class="empty-state-title">No voters found</div>
+  <p>{% if q or dept != 'all' %}No results for current filters.{% else %}Add voters manually or upload a CSV.{% endif %}</p>
+</div>
+{% endif %}
+
+<!-- ADD VOTER MODAL -->
+<div class="modal-bg" id="modal-add" onclick="if(event.target===this)this.classList.remove('open')">
+  <div class="modal">
+    <h2 class="modal-title">Add Voter</h2>
+    <p class="modal-sub">Enter voter details to pre-register them in the system.</p>
+    <form method="POST" action="{{ url_for('admin_voter_add') }}" style="display:flex;flex-direction:column;gap:14px;">
+      <div class="form-group">
+        <label class="form-label">Roll Number</label>
+        <input class="form-input" type="text" name="roll_number" placeholder="e.g. 22G01A4321" required style="text-transform:uppercase;">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Full Name</label>
+        <input class="form-input" type="text" name="name" placeholder="Full Name" required>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Department</label>
+        <select class="form-input" name="department" required>
+          <option value="">Select Department...</option>
+          {% for d in departments %}
+            <option value="{{ d }}">{{ d }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn-ghost" onclick="document.getElementById('modal-add').classList.remove('open')">Cancel</button>
+        <button type="submit" class="btn-primary">Add Voter</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- CSV UPLOAD MODAL -->
+<div class="modal-bg" id="modal-csv" onclick="if(event.target===this)this.classList.remove('open')">
+  <div class="modal">
+    <h2 class="modal-title">Upload CSV</h2>
+    <p class="modal-sub">CSV must have headers: <span class="text-mono" style="color:var(--accent);">roll_number,name,department</span></p>
+    <form method="POST" action="{{ url_for('admin_voter_csv') }}" enctype="multipart/form-data" style="display:flex;flex-direction:column;gap:14px;">
+      <div class="form-group">
+        <label class="form-label">CSV File</label>
+        <input class="form-input" type="file" name="csv_file" accept=".csv" required>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn-ghost" onclick="document.getElementById('modal-csv').classList.remove('open')">Cancel</button>
+        <button type="submit" class="btn-primary">Upload</button>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}

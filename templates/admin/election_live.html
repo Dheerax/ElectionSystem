@@ -1,0 +1,123 @@
+{% extends "base_admin.html" %}
+{% block title %}Live Tracker — {{ election.election_title }}{% endblock %}
+{% block content %}
+
+<div class="page-header" style="margin-bottom:20px;display:flex;justify-content:space-between;align-items:end;">
+  <div>
+    <a href="{{ url_for('admin_elections') }}" style="display:inline-flex;align-items:center;gap:6px;font-size:13px;color:var(--text-2);margin-bottom:12px;">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>
+      Back to Elections
+    </a>
+    <h1 style="display:flex;align-items:center;gap:12px;">
+      <span class="pulse-dot" style="width:10px;height:10px;background:#10b981;border-radius:50%;display:inline-block;animation:pulse 1.5s infinite;"></span>
+      Live Tracker: {{ election.election_title }}
+    </h1>
+    <p>A real-time overview of incoming votes. Auto-updating every 5 seconds.</p>
+  </div>
+  <div style="text-align:right;">
+    <div style="font-size:11px;color:var(--text-2);text-transform:uppercase;letter-spacing:0.05em;margin-bottom:4px;">Total Votes Cast</div>
+    <div style="font-family:var(--font-display);font-size:32px;font-weight:800;color:var(--accent);line-height:1;" id="totalVotes">...</div>
+  </div>
+</div>
+
+<style>
+@keyframes pulse {
+  0% { box-shadow: 0 0 0 0 rgba(16,185,129,0.7); }
+  70% { box-shadow: 0 0 0 10px rgba(16,185,129,0); }
+  100% { box-shadow: 0 0 0 0 rgba(16,185,129,0); }
+}
+.new-row {
+  animation: highlightRow 2s ease-out forwards;
+}
+@keyframes highlightRow {
+  0% { background: rgba(16,185,129,0.2); }
+  100% { background: transparent; }
+}
+</style>
+
+<div class="card" style="padding:0;overflow:hidden;border-color:var(--border-bright);">
+  <div style="padding:16px 20px;border-bottom:1px solid var(--border-dim);background:rgba(255,255,255,0.02);display:flex;justify-content:space-between;align-items:center;">
+    <div style="font-size:14px;font-weight:600;color:var(--text-0);">Recent Activity Log</div>
+    <div style="font-size:12px;color:var(--text-2);display:flex;align-items:center;gap:6px;">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+      Secure Connection
+    </div>
+  </div>
+  <div class="table-wrap" style="padding:0;margin:0;border:none;">
+    <table class="data-table" style="margin:0;">
+      <thead>
+        <tr>
+          <th>Time</th>
+          <th>Voter Name & Dept</th>
+          <th>Roll Number</th>
+          <th>Voted For</th>
+          <th>IP & Location</th>
+        </tr>
+      </thead>
+      <tbody id="liveLogBody">
+        <tr><td colspan="5" style="text-align:center;padding:30px;color:var(--text-2);">Loading live data...</td></tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<script>
+let lastKnownVotes = 0;
+// Use the correct API endpoint at /live/data
+const LIVE_DATA_URL = window.location.pathname.replace(/\/$/, '') + '/data';
+
+function fetchLiveVotes() {
+  fetch(LIVE_DATA_URL)
+    .then(r => r.json())
+    .then(data => {
+      const votes = data.votes || [];
+      document.getElementById('totalVotes').textContent = data.total || votes.length;
+      
+      const tbody = document.getElementById('liveLogBody');
+      if (votes.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;padding:30px;color:var(--text-2);">No votes cast yet. Waiting for live votes...</td></tr>';
+        lastKnownVotes = 0;
+        return;
+      }
+      
+      let newHtml = '';
+      votes.forEach((vote, idx) => {
+        // Mark new rows that appeared since last fetch
+        let isNew = (lastKnownVotes > 0 && idx < (votes.length - lastKnownVotes)) ? 'new-row' : '';
+        
+        let rawTs = vote.timestamp || '';
+        let timestamp = '—';
+        try { timestamp = new Date(rawTs).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit', second:'2-digit'}); } catch(e) {}
+        
+        newHtml += `
+          <tr class="${isNew}">
+            <td class="mono" style="color:var(--accent);">${timestamp}</td>
+            <td>
+              <div style="font-weight:600;color:var(--text-0);">${vote.voter_name || '—'}</div>
+              <div style="font-size:11px;color:var(--text-2);margin-top:2px;">${vote.department || '—'}</div>
+            </td>
+            <td class="mono" style="font-size:13px;text-transform:uppercase;">${vote.roll_number || '—'}</td>
+            <td>
+              <div style="font-weight:600;color:var(--success);">${vote.candidate_name || '—'}</div>
+              ${vote.party_name ? `<div style="font-size:11px;color:var(--text-2);margin-top:2px;">${vote.party_name}</div>` : ''}
+            </td>
+            <td>
+              <div class="mono" style="font-size:12px;color:var(--text-1);">${vote.ip_address || '—'}</div>
+              <div style="font-size:11px;color:var(--text-2);margin-top:2px;">${vote.location || '—'}</div>
+            </td>
+          </tr>
+        `;
+      });
+      tbody.innerHTML = newHtml;
+      lastKnownVotes = votes.length;
+    })
+    .catch(err => {
+      console.error('Live Tracker Error:', err);
+    });
+}
+
+fetchLiveVotes();
+setInterval(fetchLiveVotes, 5000);
+</script>
+
+{% endblock %}

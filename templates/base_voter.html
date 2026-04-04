@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{% block title %}IEIS — Election System{% endblock %}</title>
+  <meta name="description" content="Intelligence Election Integrity System — Secure digital voting for educational institutions.">
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@600;700;800&family=Inter:wght@400;500;600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/main.css') }}">
+  <script>
+    if (localStorage.getItem('theme') === 'light') document.documentElement.setAttribute('data-theme', 'light');
+    function toggleTheme() {
+      const isLight = document.documentElement.getAttribute('data-theme') === 'light';
+      const newTheme = isLight ? 'dark' : 'light';
+      document.documentElement.setAttribute('data-theme', newTheme);
+      localStorage.setItem('theme', newTheme);
+    }
+  </script>
+</head>
+<body>
+  {% with messages = get_flashed_messages(with_categories=true) %}
+    {% for category, message in messages %}
+      <div class="flash flash-{{ category }}">{{ message }}</div>
+    {% endfor %}
+  {% endwith %}
+
+  {% block content %}{% endblock %}
+
+  <script>
+    // Auto-dismiss flash messages
+    document.querySelectorAll('.flash').forEach(function(el) {
+      setTimeout(function() {
+        el.style.transition = 'opacity 0.4s ease';
+        el.style.opacity = '0';
+        setTimeout(function() { el.remove(); }, 400);
+      }, 4000);
+    });
+  </script>
+  {% block scripts %}{% endblock %}
+
+  <!-- Floating Theme Toggle -->
+  <button onclick="toggleTheme()" style="position:fixed;bottom:24px;right:24px;z-index:9999;border-radius:50%;width:48px;height:48px;padding:0;display:flex;align-items:center;justify-content:center;background:var(--bg-1);border:1px solid var(--border-bright);box-shadow:0 8px 24px rgba(0,0,0,0.3);color:var(--text-1);cursor:pointer;" title="Toggle Theme">
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
+    </svg>
+  </button>
+</body>
+</html>

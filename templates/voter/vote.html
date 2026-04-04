@@ -1,0 +1,275 @@
+{% extends "base_voter.html" %}
+{% block title %}Vote — {{ election.election_title }} — IEIS{% endblock %}
+{% block content %}
+
+<div style="min-height:100vh;background:var(--bg-0);padding:32px clamp(16px,4vw,52px);position:relative;">
+  <!-- Ambient bg -->
+  <div style="position:fixed;inset:0;pointer-events:none;z-index:0;background:radial-gradient(ellipse 60% 50% at 50% 0%,rgba(139,92,246,0.08),transparent 60%);"></div>
+
+  <div style="position:relative;z-index:1;max-width:960px;margin:0 auto;">
+
+    <!-- BACK + HEADER -->
+    <div style="margin-bottom:28px;">
+      <a href="{{ url_for('voter_dashboard') }}" style="display:inline-flex;align-items:center;gap:6px;font-size:13px;color:var(--text-2);transition:color 0.2s;margin-bottom:16px;" onmouseover="this.style.color='var(--text-0)'" onmouseout="this.style.color='var(--text-2)'">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>
+        Back to Dashboard
+      </a>
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:12px;">
+        <div>
+          <div class="active-chip" style="margin-bottom:10px;">🟢 Election Active</div>
+          <h1 style="font-family:var(--font-display);font-size:28px;font-weight:800;color:var(--text-0);letter-spacing:-0.02em;margin-bottom:4px;">{{ election.election_title }}</h1>
+          <p style="font-size:13px;color:var(--text-1);font-family:var(--font-mono);">{{ election.start_date }} → {{ election.end_date }}</p>
+          {% if election.position_role %}
+            <div style="margin-top:6px;font-size:14px;color:var(--accent);font-weight:600;">Position: {{ election.position_role }}</div>
+          {% endif %}
+          {% if election.description %}
+            <p style="margin-top:6px;font-size:13px;color:var(--text-1);max-width:600px;">{{ election.description }}</p>
+          {% endif %}
+        </div>
+        <div style="text-align:right;">
+          <div style="font-size:11px;color:var(--text-2);text-transform:uppercase;letter-spacing:0.09em;font-weight:600;margin-bottom:4px;">{{ candidates|length }} Candidates</div>
+          <div style="font-size:11px;color:var(--text-2);font-family:var(--font-mono);">Select one below</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- INSTRUCTION CALLOUT -->
+    <div class="info-callout" style="margin-bottom:24px;">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
+      <div>
+        <strong style="color:var(--text-0);">How to vote:</strong>
+        Step 1: Select a candidate. Step 2: Verify your identity via webcam. Step 3: <strong style="color:var(--text-0);">Cast Vote</strong>.
+        Your vote is <strong style="color:var(--text-0);">final</strong>.
+      </div>
+    </div>
+
+    <!-- CANDIDATES GRID -->
+    {% if candidates %}
+    <form method="POST" action="{{ url_for('vote_submit', election_id=election.election_id) }}" id="voteForm">
+      <input type="hidden" name="candidate_id" id="selectedCandidateId" value="">
+      <div class="candidate-grid" style="grid-template-columns:repeat(auto-fill,minmax(220px,1fr));">
+        {% for c in candidates %}
+        <div class="candidate-card" id="card{{ c.candidate_id }}" onclick="selectCandidate({{ c.candidate_id }})">
+          <!-- Checkmark -->
+          <div class="candidate-check">
+            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg>
+          </div>
+
+          <!-- Symbol -->
+          {% if c.symbol_path %}
+            <img src="{{ url_for('static', filename=c.symbol_path) }}" class="candidate-symbol" alt="{{ c.candidate_name }} symbol">
+          {% else %}
+            <div class="candidate-symbol-placeholder">
+              <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="var(--text-2)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M6 20v-2a4 4 0 0 1 4-4h4a4 4 0 0 1 4 4v2"/></svg>
+            </div>
+          {% endif %}
+
+          <div class="candidate-name">{{ c.candidate_name }}</div>
+          <div class="candidate-position">{{ c.position }}</div>
+          {% if c.party_name %}
+            <div class="candidate-party">{{ c.party_name }}</div>
+          {% endif %}
+          {% if c.description %}
+            <div style="font-size:12px;color:var(--text-1);margin-top:8px;border-top:1px solid rgba(255,255,255,0.05);padding-top:8px;">{{ c.description }}</div>
+          {% endif %}
+        </div>
+        {% endfor %}
+      </div>
+    </form>
+
+    <!-- SUBMIT & VERIFY SECTION -->
+    <div id="votePanel" style="margin-top:28px;padding:24px;background:rgba(255,255,255,0.025);border:1px solid var(--border-bright);border-radius:var(--radius-lg);display:none;">
+      
+      <!-- Selected Info -->
+      <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px;margin-bottom:20px;padding-bottom:20px;border-bottom:1px solid var(--border-dim);">
+        <div>
+          <div style="font-size:12px;color:var(--text-2);text-transform:uppercase;letter-spacing:0.08em;font-weight:600;margin-bottom:2px;">Selected Candidate</div>
+          <div id="selectedName" style="font-family:var(--font-display);font-size:18px;font-weight:700;color:var(--text-0);"></div>
+          <div id="selectedParty" style="font-size:13px;color:var(--accent);"></div>
+        </div>
+        <button type="button" class="btn-ghost" onclick="clearSelection()">Change Selection</button>
+      </div>
+
+      <!-- Face Verification Step -->
+      <div>
+        <div style="font-weight:600;color:var(--text-0);margin-bottom:8px;">Identity Verification (ArcFace Biometric)</div>
+        <p style="font-size:13px;color:var(--text-1);margin-bottom:16px;">Please capture your face to verify your identity before casting the vote.</p>
+
+        <div style="display:flex;flex-wrap:wrap;gap:20px;">
+          <!-- Camera Box -->
+          <div style="flex:1;min-width:280px;">
+            <div style="position:relative;background:#000;border-radius:8px;overflow:hidden;aspect-ratio:4/3;display:flex;align-items:center;justify-content:center;border:1px solid var(--border-dim);">
+              <video id="webcamVideo" autoplay playsinline style="display:none;width:100%;height:100%;object-fit:cover;"></video>
+              <canvas id="webcamCanvas" style="display:none;"></canvas>
+              <img id="capturedImg" style="display:none;width:100%;height:100%;object-fit:cover;">
+              <div id="webcamPlaceholder" style="text-align:center;color:var(--text-2);">
+                <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="margin-bottom:8px;"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
+                <div style="font-size:12px;">Camera Offline</div>
+              </div>
+            </div>
+            <div style="display:flex;gap:8px;margin-top:12px;">
+              <button class="btn-ghost" style="flex:1;padding:8px;" id="startCamBtn" onclick="startCam()">Start Camera</button>
+              <button class="btn-primary" style="flex:1;padding:8px;" id="captureBtn" onclick="capturePhoto()" disabled>Capture</button>
+              <button class="btn-ghost" style="flex:1;padding:8px;display:none;" id="retakeBtn" onclick="retakePhoto()">Retake</button>
+            </div>
+          </div>
+
+          <!-- Submit Box -->
+          <div style="flex:1;min-width:280px;display:flex;flex-direction:column;justify-content:center;background:rgba(0,0,0,0.2);padding:24px;border-radius:8px;">
+            <div id="voteError" class="form-error" style="margin-bottom:16px;font-size:13px;"></div>
+            <button type="button" class="btn-primary w-full" id="castBtn" onclick="castVote()" disabled style="padding:16px;">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9 12l2 2 4-4"/><path d="M21 12c0 4.97-4.03 9-9 9S3 16.97 3 12 7.03 3 12 3s9 4.03 9 9z"/></svg>
+              Verify &amp; Cast Vote
+            </button>
+            <p style="font-size:11px;color:var(--text-2);text-align:center;margin-top:12px;">Capture your face to enable the voting button.</p>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+    <p id="selectPrompt" style="text-align:center;color:var(--text-2);font-size:13px;margin-top:20px;">
+      ↑ Click a candidate above to select your vote
+    </p>
+
+    {% else %}
+    <div class="empty-state">
+      <div class="empty-state-icon">👤</div>
+      <div class="empty-state-title">No candidates added yet</div>
+      <p>The administrator has not added any candidates to this election.</p>
+    </div>
+    {% endif %}
+
+  </div>
+</div>
+
+<!-- SUCCESS OVERLAY -->
+<div class="vote-overlay" id="voteOverlay">
+  <div class="vote-overlay-check">
+    <svg width="80" height="80" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+  </div>
+  <h2>Vote Secured!</h2>
+  <p>Your vote has been verified and cast successfully. A confirmation email is on its way.</p>
+  <div style="margin-top:24px;font-size:13px;color:var(--text-2);">Redirecting to dashboard<span id="countdownText"></span>…</div>
+</div>
+
+<script>
+var candidateData = {
+  {% for c in candidates %}
+  {{ c.candidate_id }}: { name: {{ c.candidate_name|tojson }}, position: {{ c.position|tojson }}, party: {{ (c.party_name or '')|tojson }}, desc: {{ (c.description or '')|tojson }} }{% if not loop.last %},{% endif %}
+  {% endfor %}
+};
+var selected = null;
+var photoData = '';
+var stream = null;
+
+function selectCandidate(id) {
+  if (selected) document.getElementById('card' + selected).classList.remove('selected');
+  selected = id;
+  document.getElementById('card' + id).classList.add('selected');
+  document.getElementById('selectedCandidateId').value = id;
+  var data = candidateData[id];
+  document.getElementById('selectedName').textContent = data.name + ' · ' + data.position;
+  document.getElementById('selectedParty').textContent = data.party || '';
+  document.getElementById('votePanel').style.display = 'block';
+  document.getElementById('selectPrompt').style.display = 'none';
+  // Scroll to panel
+  document.getElementById('votePanel').scrollIntoView({behavior: 'smooth', block: 'nearest'});
+}
+
+function clearSelection() {
+  if (selected) { document.getElementById('card' + selected).classList.remove('selected'); selected = null; }
+  document.getElementById('selectedCandidateId').value = '';
+  document.getElementById('votePanel').style.display = 'none';
+  document.getElementById('selectPrompt').style.display = 'block';
+}
+
+function startCam() {
+  document.getElementById('voteError').textContent = '';
+  navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user', width: { ideal: 640 }, height: { ideal: 480 } }, audio: false })
+    .then(function(s) {
+      stream = s;
+      var vid = document.getElementById('webcamVideo');
+      vid.srcObject = s;
+      vid.style.display = 'block';
+      document.getElementById('webcamPlaceholder').style.display = 'none';
+      document.getElementById('captureBtn').disabled = false;
+      document.getElementById('startCamBtn').disabled = true;
+    })
+    .catch(function() { document.getElementById('voteError').textContent = 'Camera access denied. Please allow camera and retry.'; });
+}
+
+function capturePhoto() {
+  var vid = document.getElementById('webcamVideo');
+  var canvas = document.getElementById('webcamCanvas');
+  canvas.width = vid.videoWidth; canvas.height = vid.videoHeight;
+  canvas.getContext('2d').drawImage(vid, 0, 0);
+  photoData = canvas.toDataURL('image/jpeg', 0.85);
+  var img = document.getElementById('capturedImg');
+  img.src = photoData; img.style.display = 'block';
+  vid.style.display = 'none';
+  document.getElementById('retakeBtn').style.display = 'block';
+  document.getElementById('captureBtn').disabled = true;
+  document.getElementById('startCamBtn').style.display = 'none';
+  if (stream) { stream.getTracks().forEach(function(t){ t.stop(); }); stream = null; }
+  
+  // Enable cast button
+  document.getElementById('castBtn').disabled = false;
+  document.getElementById('voteError').textContent = '';
+}
+
+function retakePhoto() {
+  photoData = '';
+  document.getElementById('capturedImg').style.display = 'none';
+  document.getElementById('retakeBtn').style.display = 'none';
+  document.getElementById('startCamBtn').style.display = 'block';
+  document.getElementById('startCamBtn').disabled = false;
+  document.getElementById('castBtn').disabled = true;
+  startCam();
+}
+
+function castVote() {
+  if (!selected) return;
+  if (!photoData) {
+    document.getElementById('voteError').textContent = 'Please capture your face first.';
+    return;
+  }
+  
+  var btn = document.getElementById('castBtn');
+  btn.disabled = true;
+  btn.innerHTML = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0z" stroke-dasharray="50" stroke-dashoffset="0"><animateTransform attributeName="transform" type="rotate" from="0 12 12" to="360 12 12" dur="0.7s" repeatCount="indefinite"/></path></svg> Verifying...';
+  document.getElementById('voteError').textContent = '';
+
+  fetch('{{ url_for("vote_submit", election_id=election.election_id) }}', {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({
+      candidate_id: selected,
+      face_photo: photoData
+    })
+  })
+  .then(function(r) { return r.json().then(function(d){ return {ok:r.ok,d:d}; }); })
+  .then(function(res) {
+    if (res.ok && res.d.success) {
+      document.getElementById('voteOverlay').classList.add('show');
+      var n = 3;
+      var t = document.getElementById('countdownText');
+      var iv = setInterval(function() {
+        n--;
+        t.textContent = ' in ' + n + 's';
+        if (n <= 0) { clearInterval(iv); window.location.href = '{{ url_for("voter_dashboard") }}'; }
+      }, 1000);
+    } else {
+      btn.disabled = false;
+      btn.innerHTML = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9 12l2 2 4-4"/><path d="M21 12c0 4.97-4.03 9-9 9S3 16.97 3 12 7.03 3 12 3s9 4.03 9 9z"/></svg> Verify & Cast Vote';
+      document.getElementById('voteError').textContent = res.d.error || 'Verification failed.';
+    }
+  })
+  .catch(function() {
+    btn.disabled = false;
+    btn.innerHTML = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9 12l2 2 4-4"/><path d="M21 12c0 4.97-4.03 9-9 9S3 16.97 3 12 7.03 3 12 3s9 4.03 9 9z"/></svg> Verify & Cast Vote';
+    document.getElementById('voteError').textContent = 'Network error. Please check your connection and try again.';
+  });
+}
+</script>
+{% endblock %}

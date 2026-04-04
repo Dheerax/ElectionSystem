@@ -1,0 +1,79 @@
+{% extends "base_voter.html" %}
+{% block title %}Voter Login — IEIS{% endblock %}
+{% block content %}
+<div class="voter-layout">
+  <div class="voter-card">
+    <div class="voter-logo">
+      <div class="voter-logo-icon">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M9 12l2 2 4-4"/>
+          <path d="M21 12c0 4.97-4.03 9-9 9S3 16.97 3 12 7.03 3 12 3s9 4.03 9 9z"/>
+        </svg>
+      </div>
+      IEIS
+    </div>
+
+    <h1 style="font-family:var(--font-display);font-size:22px;font-weight:800;color:var(--text-0);margin-bottom:6px;">Voter Login</h1>
+    <p style="font-size:13px;color:var(--text-1);margin-bottom:28px;">Enter your roll number and password to access the voting portal.</p>
+
+    {% with msgs = get_flashed_messages(with_categories=true) %}
+      {% for cat, msg in msgs %}
+        <div class="alert alert-{{ cat }}" style="margin-bottom:16px;padding:10px 14px;border-radius:8px;font-size:13px;
+          background:{% if cat=='error' %}rgba(239,68,68,0.1){% elif cat=='success' %}rgba(16,185,129,0.1){% else %}rgba(245,158,11,0.1){% endif %};
+          border:1px solid {% if cat=='error' %}rgba(239,68,68,0.3){% elif cat=='success' %}rgba(16,185,129,0.3){% else %}rgba(245,158,11,0.3){% endif %};
+          color:{% if cat=='error' %}#ef4444{% elif cat=='success' %}#10b981{% else %}#f59e0b{% endif %};">
+          {{ msg }}
+        </div>
+      {% endfor %}
+    {% endwith %}
+
+    <form method="POST" action="{{ url_for('voter_login') }}" style="display:flex;flex-direction:column;gap:16px;">
+      <div class="form-group">
+        <label class="form-label" for="roll_number">Roll Number</label>
+        <input class="form-input" type="text" id="roll_number" name="roll_number"
+               placeholder="e.g. 22G01A4321" required
+               style="text-transform:uppercase;" oninput="this.value=this.value.toUpperCase()">
+      </div>
+      <div class="form-group">
+        <label class="form-label" for="password">Password</label>
+        <div style="position:relative;">
+          <input class="form-input" type="password" id="password" name="password"
+                 placeholder="Your registration password" required style="padding-right:40px;">
+          <button type="button" onclick="togglePwd()" style="position:absolute;right:10px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;color:var(--text-2);padding:0;">
+            <svg id="eyeIcon" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+          </button>
+        </div>
+      </div>
+      <button type="submit" class="btn-primary w-full">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/><polyline points="10 17 15 12 10 7"/><line x1="15" y1="12" x2="3" y2="12"/></svg>
+        Sign In to Vote
+      </button>
+    </form>
+
+    <div style="margin-top:24px;display:flex;flex-direction:column;gap:10px;align-items:center;">
+      <p style="font-size:13px;color:var(--text-2);">Not registered yet?</p>
+      <a href="{{ url_for('register') }}" class="btn-ghost w-full" style="text-align:center;">Register to Vote</a>
+      <p style="font-size:12px;color:var(--text-2);margin-top:8px;">
+        Need help? <a href="{{ url_for('complaint') }}" style="color:var(--accent);font-weight:600;">Contact Customer Care</a>
+      </p>
+    </div>
+
+    <p style="margin-top:16px;text-align:center;font-size:13px;color:var(--text-2);">
+      <a href="{{ url_for('index') }}" style="color:var(--text-2);">← Back to home</a>
+    </p>
+  </div>
+</div>
+<script>
+function togglePwd() {
+  var inp = document.getElementById('password');
+  var icon = document.getElementById('eyeIcon');
+  if (inp.type === 'password') {
+    inp.type = 'text';
+    icon.innerHTML = '<path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94"/><path d="M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19"/><line x1="1" y1="1" x2="23" y2="23"/>';
+  } else {
+    inp.type = 'password';
+    icon.innerHTML = '<path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/>';
+  }
+}
+</script>
+{% endblock %}

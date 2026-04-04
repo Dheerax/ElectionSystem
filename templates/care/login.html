@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Customer Care Login — IEIS</title>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@600;700;800&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/main.css') }}">
+  <script>
+    if (localStorage.getItem('theme') === 'light') document.documentElement.setAttribute('data-theme', 'light');
+  </script>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+</head>
+<body class="admin-login-page">
+
+  {% with messages = get_flashed_messages(with_categories=true) %}
+    {% for category, message in messages %}
+      <div class="flash flash-{{ category }}">{{ message }}</div>
+    {% endfor %}
+  {% endwith %}
+
+  <div class="admin-login-card">
+    <div class="admin-login-logo">
+      <div class="logo-icon">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+      </div>
+      Care Portal
+    </div>
+    <p class="admin-login-sub">Welcome to the IEIS Care Console. Please enter your support staff credentials to assist voters.</p>
+
+    <form method="POST" action="{{ url_for('care_login') }}">
+      <div class="form-group">
+        <label class="form-label" for="username">Username</label>
+        <input class="form-input" type="text" id="username" name="username" placeholder="Care Staff ID" required autocomplete="username">
+      </div>
+      
+      <div class="form-group" style="margin-top:16px;">
+        <label class="form-label" for="password">Password</label>
+        <input class="form-input" type="password" id="password" name="password" placeholder="••••••••" required autocomplete="current-password">
+      </div>
+
+      <button type="submit" class="btn-primary w-full" style="margin-top:24px;">
+        Sign In to Portal
+      </button>
+    </form>
+    
+    <div style="margin-top:24px;text-align:center;font-size:12px;">
+      <a href="/" style="color:var(--text-2);text-decoration:none;">← Return Home</a>
+    </div>
+  </div>
+
+</body>
+</html>

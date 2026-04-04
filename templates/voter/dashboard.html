@@ -1,0 +1,184 @@
+{% extends "base_voter.html" %}
+{% block title %}My Dashboard — IEIS{% endblock %}
+{% block content %}
+
+<div style="min-height:100vh;position:relative;background:var(--bg-0);">
+  <!-- Background orbs -->
+  <div style="position:fixed;inset:0;pointer-events:none;z-index:0;
+    background:radial-gradient(ellipse 70% 50% at 20% 0%,rgba(139,92,246,0.09),transparent 60%),
+               radial-gradient(ellipse 50% 40% at 85% 90%,rgba(109,40,217,0.06),transparent 60%);"></div>
+
+  <div style="position:relative;z-index:1;padding:32px clamp(16px,4vw,52px);">
+
+    <!-- TOPBAR -->
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:32px;flex-wrap:wrap;gap:12px;">
+      <div style="display:flex;align-items:center;gap:12px;">
+        <div style="width:44px;height:44px;border-radius:50%;background:linear-gradient(135deg,var(--accent),var(--accent-2));display:flex;align-items:center;justify-content:center;font-family:var(--font-display);font-size:18px;font-weight:800;color:#fff;box-shadow:0 4px 14px rgba(139,92,246,0.4);">
+          {{ voter.name[0].upper() }}
+        </div>
+        <div>
+          <div style="font-family:var(--font-display);font-size:22px;font-weight:800;color:var(--text-0);letter-spacing:-0.02em;">
+            Hi, {{ voter.name.split(' ')[0] }} 👋
+          </div>
+          <div style="font-size:13px;color:var(--text-2);font-family:var(--font-mono);">
+            {{ voter.roll_number }} · {{ voter.department or 'Student' }}
+          </div>
+        </div>
+      </div>
+      <div style="display:flex;gap:8px;align-items:center;">
+        <a href="{{ url_for('complaint') }}" class="btn-ghost btn-sm">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+          Report Issue
+        </a>
+        <a href="{{ url_for('voter_logout') }}" class="btn-ghost btn-sm">Sign Out</a>
+      </div>
+    </div>
+
+    <!-- VOTER ID CARD & STATS ROW -->
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px;margin-bottom:28px;">
+      <!-- My Status Card -->
+      <div class="stat-card" style="--card-accent:linear-gradient(180deg,var(--accent),var(--accent-2));">
+        <div style="font-size:11px;font-weight:600;letter-spacing:0.08em;text-transform:uppercase;color:var(--text-2);margin-bottom:4px;">Face ID Profile</div>
+        <div style="font-size:18px;font-weight:700;color:var(--accent);">ArcFace Enrolled</div>
+        <div style="font-size:12px;color:var(--text-1);margin-top:6px;">
+          Biometric verified for voting
+        </div>
+      </div>
+      <!-- Active Elections -->
+      <div class="stat-card" style="--card-accent:var(--success);">
+        <div style="font-size:11px;font-weight:600;letter-spacing:0.08em;text-transform:uppercase;color:var(--text-2);margin-bottom:8px;">Active Elections</div>
+        <div style="font-family:var(--font-display);font-size:32px;font-weight:800;color:var(--success);line-height:1;">
+          {{ elections|selectattr('status','equalto','active')|list|length }}
+        </div>
+        <div style="font-size:12px;color:var(--text-1);margin-top:6px;">Currently live</div>
+      </div>
+      <!-- Eligible Count -->
+      <div class="stat-card" style="--card-accent:var(--warn);">
+        <div style="font-size:11px;font-weight:600;letter-spacing:0.08em;text-transform:uppercase;color:var(--text-2);margin-bottom:8px;">Elections Available</div>
+        <div style="font-family:var(--font-display);font-size:32px;font-weight:800;color:var(--warn);line-height:1;">
+          {{ elections|selectattr('eligible')|list|length }}
+        </div>
+        <div style="font-size:12px;color:var(--text-1);margin-top:6px;">You are eligible for</div>
+      </div>
+    </div>
+
+    <!-- ELECTIONS -->
+    {% if elections %}
+    <div style="margin-bottom:20px;">
+      <h2 style="font-family:var(--font-display);font-size:18px;font-weight:700;color:var(--text-0);margin-bottom:4px;">Available Elections</h2>
+      <p style="font-size:13px;color:var(--text-2);">Elections you are enrolled in — sorted by status.</p>
+    </div>
+
+    <!-- Active first, then upcoming, then ended -->
+    {% set active_els = elections|selectattr('status','equalto','active')|list %}
+    {% set upcoming_els = elections|selectattr('status','equalto','upcoming')|list %}
+    {% set ended_els = elections|selectattr('status','equalto','ended')|list %}
+
+    {% if active_els %}
+    <div style="margin-bottom:10px;font-size:11px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:var(--success);">🟢 Live Now</div>
+    <div class="election-grid" style="margin-bottom:24px;">
+      {% for e in active_els %}
+      <div class="election-card" style="border-color:rgba(16,185,129,0.25);">
+        <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:12px;">
+          <div>
+            <div class="election-card-title">{{ e.election_title }}</div>
+            {% if e.position_role %}
+              <div style="font-size:12px;color:var(--accent);font-weight:600;margin-top:2px;">{{ e.position_role }}</div>
+            {% endif %}
+            <div class="election-card-dates" style="margin-top:4px;">Ends {{ e.end_date }}</div>
+          </div>
+          <div class="active-chip">Live</div>
+        </div>
+        
+        {% if e.description %}
+          <div style="font-size:12px;color:var(--text-2);margin-bottom:12px;line-height:1.4;">{{ e.description[:80] }}{% if e.description|length > 80 %}...{% endif %}</div>
+        {% endif %}
+
+        {% if not e.eligible %}
+          <div class="info-callout" style="margin-bottom:0;"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12.01" y2="8"/><line x1="12" y1="12" x2="12" y2="16"/></svg><div>Not eligible for this election.</div></div>
+        {% elif e.already_voted %}
+          <div class="voted-chip w-full" style="justify-content:center;">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg>
+            Your vote has been recorded
+          </div>
+        {% else %}
+          <div class="election-card-footer" style="padding-top:0;border-top:none;">
+            <a href="{{ url_for('vote_page', election_id=e.election_id) }}" class="btn-primary w-full" style="justify-content:center;padding:14px;">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9 12l2 2 4-4"/><path d="M21 12c0 4.97-4.03 9-9 9S3 16.97 3 12 7.03 3 12 3s9 4.03 9 9z"/></svg>
+              Cast Your Vote
+            </a>
+          </div>
+        {% endif %}
+      </div>
+      {% endfor %}
+    </div>
+    {% endif %}
+
+    {% if upcoming_els %}
+    <div style="margin-bottom:10px;font-size:11px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:#A78BFA;">🔵 Upcoming</div>
+    <div class="election-grid" style="margin-bottom:24px;">
+      {% for e in upcoming_els %}
+      <div class="election-card">
+        <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:12px;">
+          <div>
+            <div class="election-card-title">{{ e.election_title }}</div>
+            {% if e.position_role %}
+              <div style="font-size:12px;color:var(--accent);font-weight:600;margin-top:2px;">{{ e.position_role }}</div>
+            {% endif %}
+            <div class="election-card-dates" style="margin-top:4px;">Opens {{ e.start_date }}</div>
+          </div>
+          <span class="badge badge-upcoming">Upcoming</span>
+        </div>
+        {% if not e.eligible %}
+          <p class="not-eligible-text">Not eligible for this election</p>
+        {% else %}
+          <div style="font-size:13px;color:var(--text-1);margin-top:4px;">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline;vertical-align:middle;"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+            Voting opens on <strong style="color:var(--text-0);">{{ e.start_date }}</strong>
+          </div>
+        {% endif %}
+      </div>
+      {% endfor %}
+    </div>
+    {% endif %}
+
+    {% if ended_els %}
+    <div style="margin-bottom:10px;font-size:11px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:var(--text-2);">⬛ Ended</div>
+    <div class="election-grid">
+      {% for e in ended_els %}
+      <div class="election-card" style="opacity:0.7;">
+        <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:12px;">
+          <div>
+            <div class="election-card-title">{{ e.election_title }}</div>
+            {% if e.position_role %}
+              <div style="font-size:12px;color:var(--accent);font-weight:600;margin-top:2px;">{{ e.position_role }}</div>
+            {% endif %}
+            <div class="election-card-dates" style="margin-top:4px;">Ended {{ e.end_date }}</div>
+          </div>
+          <span class="badge badge-ended">Ended</span>
+        </div>
+        {% if e.already_voted %}
+          <div class="voted-chip"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M20 6L9 17l-5-5"/></svg>You voted</div>
+        {% else %}
+          <p style="font-size:13px;color:var(--text-2);">{% if not e.eligible %}Not eligible{% else %}You did not vote{% endif %}</p>
+        {% endif %}
+      </div>
+      {% endfor %}
+    </div>
+    {% endif %}
+
+    {% else %}
+    <!-- No elections at all -->
+    <div class="card" style="text-align:center;padding:60px 24px;margin-top:24px;">
+      <div style="width:60px;height:60px;border-radius:50%;background:rgba(139,92,246,0.1);border:1px solid rgba(139,92,246,0.2);display:flex;align-items:center;justify-content:center;margin:0 auto 18px;">
+        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#A78BFA" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 12V22H4V12"/><path d="M22 7H2v5h20V7z"/><path d="M12 22V7"/></svg>
+      </div>
+      <h2 style="font-family:var(--font-display);font-size:22px;font-weight:800;color:var(--text-0);margin-bottom:8px;">No elections scheduled</h2>
+      <p style="color:var(--text-1);font-size:14px;max-width:320px;margin:0 auto 24px;">Elections will appear here once they are created by the administrator. Check back soon.</p>
+      <a href="{{ url_for('complaint') }}" class="btn-ghost btn-sm">Submit a Complaint</a>
+    </div>
+    {% endif %}
+
+  </div>
+</div>
+{% endblock %}

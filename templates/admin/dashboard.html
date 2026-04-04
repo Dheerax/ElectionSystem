@@ -1,0 +1,261 @@
+{% extends "base_admin.html" %}
+{% block title %}Dashboard — IEIS Admin{% endblock %}
+{% block content %}
+
+<!-- PAGE HEADER -->
+<div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:28px;flex-wrap:wrap;gap:12px;">
+  <div>
+    <h1 style="font-family:var(--font-display);font-size:28px;font-weight:800;color:var(--text-0);letter-spacing:-0.02em;">Dashboard</h1>
+    <p style="font-size:14px;color:var(--text-1);margin-top:4px;">
+      Current election system status — <span style="font-family:var(--font-mono);font-size:12px;color:var(--text-2);" id="live-time"></span>
+    </p>
+  </div>
+  <div class="active-chip" style="margin-top:4px;">System Online</div>
+</div>
+
+<!-- STAT CARDS -->
+<div class="stat-cards">
+  <div class="stat-card" style="--card-accent:linear-gradient(180deg,var(--accent),var(--accent-2));--card-glow:radial-gradient(circle,rgba(139,92,246,0.2),transparent 70%);">
+    <div style="font-size:11px;font-weight:600;letter-spacing:0.09em;text-transform:uppercase;color:var(--text-2);margin-bottom:10px;">Total Voters</div>
+    <div class="stat-num" data-target="{{ total_voters }}">0</div>
+    <div class="stat-label">in the system</div>
+  </div>
+  <div class="stat-card" style="--card-accent:var(--success);--card-glow:radial-gradient(circle,rgba(16,185,129,0.15),transparent 70%);">
+    <div style="font-size:11px;font-weight:600;letter-spacing:0.09em;text-transform:uppercase;color:var(--text-2);margin-bottom:10px;">Registered</div>
+    <div class="stat-num" style="color:var(--success);" data-target="{{ registered }}">0</div>
+    <div class="stat-label">verified &amp; active</div>
+  </div>
+  <div class="stat-card" style="--card-accent:var(--warn);--card-glow:radial-gradient(circle,rgba(245,158,11,0.15),transparent 70%);">
+    <div style="font-size:11px;font-weight:600;letter-spacing:0.09em;text-transform:uppercase;color:var(--text-2);margin-bottom:10px;">Votes Cast</div>
+    <div class="stat-num" style="color:var(--warn);" data-target="{{ votes_cast }}">0</div>
+    <div class="stat-label">across all elections</div>
+  </div>
+</div>
+
+<!-- QUICK ACTIONS -->
+<div style="margin-bottom:28px;">
+  <h2 style="font-family:var(--font-display);font-size:16px;font-weight:700;color:var(--text-0);margin-bottom:14px;">Quick Actions</h2>
+  <div class="quick-grid">
+    <a href="{{ url_for('admin_voters') }}" class="quick-tile" style="--tile-gradient:linear-gradient(135deg,rgba(139,92,246,0.1),transparent);">
+      <div class="quick-tile-icon" style="background:rgba(139,92,246,0.15);">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#A78BFA" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+      </div>
+      <div class="quick-tile-label">Manage Voters</div>
+      <div class="quick-tile-sub">Add · Upload CSV · View</div>
+    </a>
+    <a href="{{ url_for('admin_elections') }}" class="quick-tile" style="--tile-gradient:linear-gradient(135deg,rgba(16,185,129,0.1),transparent);">
+      <div class="quick-tile-icon" style="background:rgba(16,185,129,0.15);">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#10B981" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+      </div>
+      <div class="quick-tile-label">Elections</div>
+      <div class="quick-tile-sub">Create · Schedule · End</div>
+    </a>
+    <a href="{{ url_for('admin_candidates') }}" class="quick-tile" style="--tile-gradient:linear-gradient(135deg,rgba(245,158,11,0.1),transparent);">
+      <div class="quick-tile-icon" style="background:rgba(245,158,11,0.15);">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#F59E0B" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M6 20v-2a4 4 0 0 1 4-4h4a4 4 0 0 1 4 4v2"/></svg>
+      </div>
+      <div class="quick-tile-label">Candidates</div>
+      <div class="quick-tile-sub">Add Symbols · Assign</div>
+    </a>
+  </div>
+</div>
+
+<!-- MAIN 2-COL DASHBOARD -->
+<div class="dashboard-grid">
+  <!-- LEFT COLUMN -->
+  <div class="dashboard-col">
+
+    <!-- ELECTIONS OVERVIEW -->
+    <div class="card">
+      <div class="section-head">
+        <h2 style="font-family:var(--font-display);font-size:16px;font-weight:700;color:var(--text-0);">Elections Overview</h2>
+        <a href="{{ url_for('admin_elections') }}" class="btn-ghost btn-sm">View All</a>
+      </div>
+      {% if elections %}
+      <div class="election-status-grid">
+        {% for e in elections %}
+        {% set total_e = e.candidate_count or 0 %}
+        {% set pct = ((e.vote_count or 0) / (e.eligible_count or 1) * 100)|int if (e.eligible_count or 0) > 0 else 0 %}
+        <div class="election-status-card">
+          <div class="election-status-card-top">
+            <div>
+              <div class="election-status-title">{{ e.election_title }}</div>
+              <div class="election-status-meta">{{ e.start_date }} → {{ e.end_date }}</div>
+            </div>
+            {% if e.status == 'active' %}
+              <div class="active-chip">Live</div>
+            {% elif e.status == 'upcoming' %}
+              <span class="badge badge-upcoming">Upcoming</span>
+            {% else %}
+              <span class="badge badge-ended">Ended</span>
+            {% endif %}
+          </div>
+          <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px;">
+            <span class="count-chip">
+              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M6 20v-2a4 4 0 0 1 4-4h4a4 4 0 0 1 4 4v2"/></svg>
+              {{ total_e }} candidates
+            </span>
+            <span class="count-chip">
+              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 12V22H4V12"/><path d="M22 7H2v5h20V7z"/><path d="M12 22V7"/><path d="M12 7H7.5a2.5 2.5 0 0 1 0-5C11 2 12 7 12 7z"/><path d="M12 7h4.5a2.5 2.5 0 0 0 0-5C13 2 12 7 12 7z"/></svg>
+              {{ e.vote_count or 0 }} votes
+            </span>
+          </div>
+          <div class="pbar-wrap"><div class="pbar" style="width:{{ pct }}%;"></div></div>
+          <div class="pbar-label">
+            <span>{{ pct }}% turnout</span>
+            <a href="{{ url_for('admin_elections') }}" style="color:var(--accent);font-size:12px;">Results →</a>
+          </div>
+        </div>
+        {% endfor %}
+      </div>
+      {% else %}
+      <div class="empty-state" style="padding:40px;">
+        <div class="empty-state-icon">🗳️</div>
+        <div class="empty-state-title">No elections yet</div>
+        <p style="margin-bottom:16px;color:var(--text-2);font-size:13px;">Create your first election to get started.</p>
+        <a href="{{ url_for('admin_elections') }}" class="btn-primary btn-sm">Create Election</a>
+      </div>
+      {% endif %}
+    </div>
+
+    <!-- RECENT VOTES TABLE -->
+    <div class="card">
+      <div class="section-head">
+        <h2 style="font-family:var(--font-display);font-size:16px;font-weight:700;color:var(--text-0);">Recent Votes</h2>
+        <span style="font-size:12px;color:var(--text-2);font-family:var(--font-mono);">Last 5</span>
+      </div>
+      {% if recent_votes %}
+      <div class="table-wrap">
+        <table class="data-table">
+          <thead>
+            <tr><th style="width:140px;">Time</th><th>Voter</th><th>Election</th><th>Candidate</th><th>IP & Location</th></tr>
+          </thead>
+          <tbody>
+            {% for v in recent_votes %}
+            <tr>
+              <td class="mono local-time" style="font-size:11px;white-space:nowrap;" data-utc="{{ v.timestamp }}">{{ v.timestamp[:19].replace('T', ' ') }}</td>
+              <td>
+                <div class="mono" style="font-size:12px;">{{ v.roll_number }}</div>
+                <div style="font-size:12px;color:var(--text-2);">{{ v.name }}</div>
+              </td>
+              <td style="font-size:13px;color:var(--text-0);">{{ v.election_title }}</td>
+              <td style="color:var(--text-0);font-weight:500;">{{ v.candidate_name }}</td>
+              <td>
+                <div class="mono" style="font-size:11px;color:var(--text-0);">{{ v.ip_address or '—' }}</div>
+                <div style="font-size:11px;color:var(--text-2);">{{ v.location or '—' }}</div>
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      {% else %}
+      <div class="empty-state" style="padding:32px;">
+        <div class="empty-state-icon">📋</div>
+        <div class="empty-state-title">No votes yet</div>
+        <p style="color:var(--text-2);font-size:13px;">Votes will appear here once elections begin.</p>
+      </div>
+      {% endif %}
+    </div>
+
+  </div>
+
+  <!-- RIGHT COLUMN -->
+  <div class="dashboard-col">
+
+    <!-- SYSTEM STATUS -->
+    <div class="card">
+      <h2 style="font-family:var(--font-display);font-size:15px;font-weight:700;color:var(--text-0);margin-bottom:14px;">System Status</h2>
+      <div style="display:flex;flex-direction:column;gap:10px;">
+        <div class="health-chip"><span class="health-dot health-ok"></span>Database Connected</div>
+        <div class="health-chip"><span class="health-dot health-ok"></span>File Storage Online</div>
+        <div class="health-chip"><span class="health-dot health-warn"></span>Email Service (SMTP)</div>
+        <div class="health-chip"><span class="health-dot health-ok"></span>Geolocation API</div>
+      </div>
+      <div style="margin-top:14px;padding-top:14px;border-top:1px solid var(--border);">
+        <div style="font-size:11px;color:var(--text-2);font-family:var(--font-mono);">Build: v1.0.0 · Flask {{ flask_version if flask_version else '3.x' }}</div>
+      </div>
+    </div>
+
+    <!-- ACTIVITY FEED -->
+    <div class="card">
+      <h2 style="font-family:var(--font-display);font-size:15px;font-weight:700;color:var(--text-0);margin-bottom:14px;">Recent Activity</h2>
+      {% if activity_log %}
+      <div class="timeline">
+        {% for entry in activity_log %}
+        <div class="timeline-item">
+          <div class="timeline-dot
+            {% if 'vote' in entry.action.lower() %}timeline-dot-vote
+            {% elif 'register' in entry.action.lower() %}timeline-dot-reg
+            {% elif 'complaint' in entry.action.lower() %}timeline-dot-complain
+            {% else %}timeline-dot-admin{% endif %}">
+            {% if 'vote' in entry.action.lower() %}✓
+            {% elif 'register' in entry.action.lower() %}+
+            {% elif 'complaint' in entry.action.lower() %}!
+            {% else %}·{% endif %}
+          </div>
+          <div class="timeline-body">
+            <div class="timeline-title">{{ entry.action }}</div>
+            <div class="timeline-time">{{ entry.performed_at[:19].replace('T', ' ') if entry.performed_at else '' }}</div>
+          </div>
+        </div>
+        {% endfor %}
+      </div>
+      {% else %}
+      <div class="timeline">
+        <div class="timeline-item">
+          <div class="timeline-dot timeline-dot-admin">·</div>
+          <div class="timeline-body">
+            <div class="timeline-title" style="color:var(--text-2);">No activity recorded yet</div>
+            <div class="timeline-time">—</div>
+          </div>
+        </div>
+      </div>
+      {% endif %}
+    </div>
+
+    <!-- TIPS -->
+    <div class="info-callout">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
+      <div>
+        <strong style="color:var(--text-0);">Getting started?</strong><br>
+        1. Upload voters via CSV → 2. Create an election → 3. Add candidates → 4. Activate the election.
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<script>
+// Localize time stamps
+function localizeTimes() {
+  document.querySelectorAll('.local-time').forEach(function(el) {
+    var utc = el.getAttribute('data-utc');
+    if (utc) {
+      try {
+        var d = new Date(utc);
+        el.textContent = d.toLocaleDateString([], {month:'short', day:'numeric'}) + ' ' + d.toLocaleTimeString([], {hour:'2-digit', minute:'2-digit', hour12:false});
+      } catch(e) {}
+    }
+  });
+}
+localizeTimes();
+
+// Live time
+function updateClock() {
+  var now = new Date();
+  document.getElementById('live-time').textContent = now.toLocaleTimeString('en-IN', { hour12: false });
+}
+updateClock();
+setInterval(updateClock, 1000);
+
+// Animate pbar
+setTimeout(function() {
+  document.querySelectorAll('.pbar').forEach(function(b) {
+    var w = b.style.width;
+    b.style.width = '0%';
+    setTimeout(function() { b.style.width = w; }, 200);
+  });
+}, 300);
+</script>
+{% endblock %}

@@ -1,0 +1,85 @@
+{% extends "base_admin.html" %}
+{% block title %}Elections — IEIS Admin{% endblock %}
+{% block content %}
+<div class="page-header">
+  <h1>Election Management</h1>
+  <p>Create and monitor elections. Status is computed from today's date.</p>
+</div>
+
+<div style="margin-bottom:24px;">
+  <a href="{{ url_for('admin_election_create') }}" class="btn-primary" style="display:inline-block;text-decoration:none;">
+    + Create Election
+  </a>
+</div>
+
+{% with msgs = get_flashed_messages(with_categories=true) %}
+  {% for cat, msg in msgs %}
+    <div class="alert alert-{{ cat }}" style="margin-bottom:16px;padding:10px 14px;border-radius:8px;font-size:13px;
+      background:{% if cat=='error' %}rgba(239,68,68,0.1){% elif cat=='success' %}rgba(16,185,129,0.1){% else %}rgba(245,158,11,0.1){% endif %};
+      border:1px solid {% if cat=='error' %}rgba(239,68,68,0.3){% elif cat=='success' %}rgba(16,185,129,0.3){% else %}rgba(245,158,11,0.3){% endif %};
+      color:{% if cat=='error' %}#ef4444{% elif cat=='success' %}#10b981{% else %}#f59e0b{% endif %};">
+      {{ msg }}
+    </div>
+  {% endfor %}
+{% endwith %}
+
+<!-- ELECTIONS TABLE -->
+<div class="table-wrap">
+  {% if elections %}
+  <table class="data-table">
+    <thead>
+      <tr>
+        <th>Title</th>
+        <th>Start Date</th>
+        <th>End Date</th>
+        <th>Status</th>
+        <th style="text-align:right;">Actions</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for e in elections %}
+      <tr>
+        <td>
+          <div style="color:var(--text-0);font-weight:600;">{{ e.election_title }}</div>
+          {% if e.position_role %}
+            <div style="font-size:11px;color:var(--text-2);margin-top:2px;">{{ e.position_role }}</div>
+          {% endif %}
+        </td>
+        <td class="mono">{{ e.start_date }}</td>
+        <td class="mono">{{ e.end_date }}</td>
+        <td>
+          {% if e.status == 'active' %}
+            <span class="badge badge-active">Active</span>
+          {% elif e.status == 'upcoming' %}
+            <span class="badge badge-upcoming">Upcoming</span>
+          {% else %}
+            <span class="badge badge-ended">Ended</span>
+          {% endif %}
+        </td>
+        <td style="text-align:right;">
+          <div style="display:flex;gap:6px;justify-content:flex-end;">
+            {% if e.status == 'active' %}
+              <a href="{{ url_for('election_live', election_id=e.election_id) }}" class="btn-ghost btn-sm" style="color:#10b981;border-color:rgba(16,185,129,0.3);">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right:4px;"><circle cx="12" cy="12" r="10"/><path d="M12 2a14.5 14.5 0 0 0 0 20 14.5 14.5 0 0 0 0-20"/><path d="M2 12h20"/></svg>
+                Live Tracker
+              </a>
+            {% endif %}
+            <a href="{{ url_for('election_results', election_id=e.election_id) }}" class="btn-ghost btn-sm">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right:4px;"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg>
+              Manage & Results
+            </a>
+          </div>
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  {% else %}
+  <div class="empty-state">
+    <div class="empty-state-icon">📅</div>
+    <div class="empty-state-title">No elections yet</div>
+    <p>Create your first election to get started.</p>
+  </div>
+  {% endif %}
+</div>
+{% endblock %}

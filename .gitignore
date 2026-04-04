@@ -1,0 +1,10 @@
+__pycache__/
+*.db
+.env
+*.pyc
+*.pdf
+*.zip
+venv/
+env/
+.vscoded/
+static/uploads/

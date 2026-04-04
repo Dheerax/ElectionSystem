@@ -1,0 +1,129 @@
+{% extends "base_admin.html" %}
+{% block title %}Candidates — IEIS Admin{% endblock %}
+{% block content %}
+<div class="page-header">
+  <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:16px;">
+    <div>
+      <h1>Candidate Management</h1>
+      <p>Add and manage candidates for each election.</p>
+    </div>
+    <button class="btn-primary" onclick="document.getElementById('modal-add').classList.add('open')">
+      + Add Candidate
+    </button>
+  </div>
+</div>
+
+<!-- CANDIDATES GROUPED BY ELECTION -->
+{% if candidates %}
+  {% for election_title, group in candidates|groupby('election_title') %}
+  <div class="card" style="margin-bottom:24px;padding:0;border:1px solid rgba(255,255,255,0.08);overflow:hidden;">
+    
+    <!-- Election Header -->
+    <div style="background:var(--bg-3);padding:16px 20px;border-bottom:1px solid rgba(255,255,255,0.05);display:flex;justify-content:space-between;align-items:center;">
+      <h2 style="font-family:var(--font-display);font-size:16px;font-weight:600;color:var(--text-0);margin:0;">
+        Election: {{ election_title }}
+      </h2>
+      <span class="badge" style="background:rgba(255,255,255,0.1);color:var(--text-1);">
+        {{ group|length }} Candidate{% if group|length != 1 %}s{% endif %}
+      </span>
+    </div>
+
+    <!-- Candidates Table -->
+    <div class="table-wrap" style="margin:0;border:none;">
+      <table class="data-table" style="margin:0;border:none;">
+        <thead>
+          <tr>
+            <th>Symbol/Photo</th>
+            <th>Name</th>
+            <th>Description</th>
+            <th>Position</th>
+            <th>Party</th>
+            <th style="text-align:right;">Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for c in group %}
+          <tr>
+            <td>
+              {% if c.symbol_path %}
+                <img src="{{ url_for('static', filename=c.symbol_path) }}"
+                     style="width:40px;height:40px;object-fit:cover;border-radius:6px;background:var(--bg-2);">
+              {% else %}
+                <div style="width:40px;height:40px;border-radius:6px;background:var(--bg-2);display:flex;align-items:center;justify-content:center;font-size:18px;">👤</div>
+              {% endif %}
+            </td>
+            <td style="color:var(--text-0);font-weight:600;">{{ c.candidate_name }}</td>
+            <td style="font-size:12px;color:var(--text-2);max-width:200px;white-space:normal;">{{ c.description or '—' }}</td>
+            <td>{{ c.position }}</td>
+            <td class="mono" style="font-size:12px;">{{ c.party_name or 'Independent' }}</td>
+            <td style="text-align:right;">
+              <form method="POST" action="{{ url_for('admin_candidate_delete', candidate_id=c.candidate_id) }}"
+                    onsubmit="return confirm('Delete candidate {{ c.candidate_name }}?');" style="margin:0;">
+                <button type="submit" class="btn-danger btn-sm" style="padding:4px 8px;font-size:11px;">Delete</button>
+              </form>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+  {% endfor %}
+{% else %}
+  <div class="empty-state">
+    <div class="empty-state-icon">🗳️</div>
+    <div class="empty-state-title">No candidates yet</div>
+    <p>Add candidates to your elections to allow voting.</p>
+  </div>
+{% endif %}
+
+<!-- ADD CANDIDATE MODAL -->
+<div class="modal-bg" id="modal-add" onclick="if(event.target===this)this.classList.remove('open')">
+  <div class="modal" style="max-width:500px;">
+    <h2 class="modal-title">Add Candidate</h2>
+    <p class="modal-sub">Assign a candidate to a specific election and enter their details.</p>
+    <form method="POST" action="{{ url_for('admin_candidate_add') }}" enctype="multipart/form-data" style="display:flex;flex-direction:column;gap:14px;">
+      
+      <div class="form-group">
+        <label class="form-label">Election</label>
+        <select class="form-input" name="election_id" required>
+          <option value="">Select Election…</option>
+          {% for e in elections %}
+          <option value="{{ e.election_id }}">{{ e.election_title }}</option>
+          {% endfor %}
+        </select>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Candidate Name</label>
+        <input class="form-input" type="text" name="candidate_name" placeholder="Full Name" required>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Description / Bio</label>
+        <textarea class="form-input" name="description" rows="2" placeholder="e.g. Vice president of the Main Club..."></textarea>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Position / Role</label>
+        <input class="form-input" type="text" name="position" placeholder="e.g. President" required>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Party / Group Name</label>
+        <input class="form-input" type="text" name="party_name" placeholder="Optional (leave empty for Independent)">
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Symbol / Candidate Photo</label>
+        <input class="form-input" type="file" name="symbol" accept=".jpg,.jpeg,.png,.gif,.svg,.webp">
+      </div>
+
+      <div class="modal-footer">
+        <button type="button" class="btn-ghost" onclick="document.getElementById('modal-add').classList.remove('open')">Cancel</button>
+        <button type="submit" class="btn-primary">Add Candidate</button>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}

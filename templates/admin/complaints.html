@@ -1,0 +1,65 @@
+{% extends "base_admin.html" %}
+{% block title %}Complaints — IEIS Admin{% endblock %}
+{% block content %}
+<div class="page-header">
+  <h1>Complaint Management</h1>
+  <p>Review and resolve voter complaints.</p>
+</div>
+
+<!-- FILTERS -->
+<div style="display:flex;gap:8px;margin-bottom:20px;flex-wrap:wrap;">
+  {% for s in ['all', 'pending', 'resolved', 'rejected'] %}
+  <a href="{{ url_for('admin_complaints', status=s) }}"
+     class="btn-ghost btn-sm {% if status_filter == s %}active{% endif %}"
+     style="{% if status_filter == s %}background:var(--accent-dim);border-color:var(--border-hi);color:var(--accent);{% endif %}">
+    {{ s|capitalize }}
+  </a>
+  {% endfor %}
+</div>
+
+<div class="table-wrap">
+  {% if complaints %}
+  <table class="data-table">
+    <thead>
+      <tr>
+        <th>#</th>
+        <th>Name</th>
+        <th>Roll Number</th>
+        <th>Description</th>
+        <th>Status</th>
+        <th>Actions</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for c in complaints %}
+      <tr>
+        <td class="mono">{{ c.complaint_id }}</td>
+        <td style="color:var(--text-0);">{{ c.name }}</td>
+        <td class="mono">{{ c.roll_number }}</td>
+        <td style="font-size:13px;">{{ c.description[:60] }}{% if c.description|length > 60 %}…{% endif %}</td>
+        <td>
+          {% if c.status == 'pending' %}
+            <span class="badge badge-pending">Pending</span>
+          {% elif c.status == 'resolved' %}
+            <span class="badge badge-resolved">Resolved</span>
+          {% else %}
+            <span class="badge badge-rejected">Rejected</span>
+          {% endif %}
+        </td>
+        <td>
+          <a href="{{ url_for('admin_complaint_detail', complaint_id=c.complaint_id) }}"
+             class="btn-ghost btn-sm">View</a>
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  {% else %}
+  <div class="empty-state">
+    <div class="empty-state-icon">📬</div>
+    <div class="empty-state-title">No complaints found</div>
+    <p>{% if status_filter != 'all' %}No {{ status_filter }} complaints.{% else %}No complaints have been submitted yet.{% endif %}</p>
+  </div>
+  {% endif %}
+</div>
+{% endblock %}

@@ -1,0 +1,65 @@
+{% extends "base_voter.html" %}
+{% block title %}IEIS — Secure Digital Election Platform{% endblock %}
+{% block content %}
+<div class="landing-hero">
+  <!-- NAVBAR -->
+  <nav class="landing-nav">
+    <div class="landing-logo">
+      <div class="logo-icon">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M9 12l2 2 4-4"/>
+          <path d="M21 12c0 4.97-4.03 9-9 9S3 16.97 3 12 7.03 3 12 3s9 4.03 9 9z"/>
+        </svg>
+      </div>
+      IEIS
+    </div>
+    <div style="display:flex;gap:10px;align-items:center;">
+      <a href="{{ url_for('complaint') }}" class="btn-ghost btn-sm">Report Issue</a>
+      <a href="{{ url_for('care_login') }}" class="btn-primary btn-sm" style="background:var(--danger);color:#fff;">Care Portal</a>
+      <a href="{{ url_for('admin_login') }}" class="btn-primary btn-sm">Admin Login</a>
+    </div>
+  </nav>
+
+  <!-- HERO -->
+  <div class="landing-hero-content">
+    <div class="hero-eyebrow">
+      <span style="width:6px;height:6px;border-radius:50%;background:var(--accent);box-shadow:0 0 8px var(--accent);"></span>
+      Election Integrity System
+    </div>
+
+    <h1 class="hero-title">
+      Your Vote.<br><span class="gradient-word">Secured.</span>
+    </h1>
+
+    <p class="hero-sub">
+      A transparent, tamper-resistant digital election platform engineered for educational institutions.
+    </p>
+
+    <div class="hero-ctas">
+      <a href="{{ url_for('register') }}" class="btn-primary" style="font-size:15px;padding:14px 30px;">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><line x1="19" y1="8" x2="19" y2="14"/><line x1="22" y1="11" x2="16" y2="11"/></svg>
+        Register to Vote
+      </a>
+      <a href="{{ url_for('voter_login') }}" class="btn-ghost" style="font-size:15px;padding:14px 30px;">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 12l2 2 4-4"/><path d="M21 12c0 4.97-4.03 9-9 9S3 16.97 3 12 7.03 3 12 3s9 4.03 9 9z"/></svg>
+        Cast Your Vote
+      </a>
+    </div>
+
+    <div class="feature-pills">
+      <div class="feature-pill"><span class="feature-pill-dot"></span>Duplicate Prevention</div>
+      <div class="feature-pill"><span class="feature-pill-dot"></span>Email Confirmation</div>
+      <div class="feature-pill"><span class="feature-pill-dot"></span>Location Audit</div>
+      <div class="feature-pill"><span class="feature-pill-dot"></span>Live Photo Capture</div>
+    </div>
+  </div>
+
+  <!-- FOOTER BAR -->
+  <div style="position:relative;z-index:10;padding:20px clamp(20px,5vw,80px);border-top:1px solid var(--border);display:flex;align-items:center;justify-content:center;">
+    <p style="font-size:13px;color:var(--text-2);">
+      Built for transparent, integrity-first elections &nbsp;·&nbsp;
+      <a href="{{ url_for('complaint') }}" style="color:var(--text-1);transition:var(--transition);">Submit Complaint</a>
+    </p>
+  </div>
+</div>
+{% endblock %}

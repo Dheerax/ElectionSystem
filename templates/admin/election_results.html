@@ -1,0 +1,166 @@
+{% extends "base_admin.html" %}
+{% block title %}Election Results — IEIS Admin{% endblock %}
+{% block content %}
+<div class="page-header">
+  <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;justify-content:space-between;width:100%;">
+    <div>
+      <a href="{{ url_for('admin_elections') }}" class="btn-ghost btn-sm" style="margin-bottom:8px;">← Back to Elections</a>
+      <h1 style="display:flex;align-items:center;gap:12px;">
+        {{ election.election_title }}
+        {% if election.status == 'active' %}
+          <span class="badge badge-active">Active</span>
+        {% elif election.status == 'upcoming' %}
+          <span class="badge badge-upcoming">Upcoming</span>
+        {% else %}
+          <span class="badge badge-ended">Ended</span>
+        {% endif %}
+      </h1>
+      <p style="margin-top:4px;">
+        {{ election.start_date }} → {{ election.end_date }}
+        {% if election.position_role %} · <span style="font-weight:600;color:var(--text-1);">{{ election.position_role }}</span>{% endif %}
+      </p>
+    </div>
+
+    <!-- Actions -->
+    <div style="display:flex;gap:12px;align-items:center;">
+      {% if election.status == 'active' %}
+        <a href="{{ url_for('election_live', election_id=election.election_id) }}" class="btn-ghost" style="color:#10b981;border-color:rgba(16,185,129,0.3);">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right:6px;"><circle cx="12" cy="12" r="10"/><path d="M12 2a14.5 14.5 0 0 0 0 20 14.5 14.5 0 0 0 0-20"/><path d="M2 12h20"/></svg>
+          Live Tracker
+        </a>
+      {% endif %}
+
+      {% if election.status == 'ended' %}
+        {% if election.results_published %}
+          <div class="active-chip" style="background:rgba(16,185,129,0.1);color:#10b981;border:1px solid rgba(16,185,129,0.3);">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="margin-right:6px;"><path d="M20 6L9 17l-5-5"/></svg>
+            Results Published
+          </div>
+        {% else %}
+          <form method="POST" action="{{ url_for('admin_publish_results', election_id=election.election_id) }}" style="margin:0;">
+            <button type="submit" class="btn-primary" onclick="return confirm('Publishing results will make them visible to students and send an email blast to all eligible voters. Proceed?');">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="margin-right:6px;"><path d="M22 2L11 13"/><path d="M22 2l-7 20-4-9-9-4 20-7z"/></svg>
+              Publish Results via Email
+            </button>
+          </form>
+        {% endif %}
+      {% endif %}
+    </div>
+  </div>
+</div>
+
+{% with msgs = get_flashed_messages(with_categories=true) %}
+  {% for cat, msg in msgs %}
+    <div class="alert alert-{{ cat }}" style="margin-bottom:20px;padding:12px 16px;border-radius:8px;font-size:13px;
+      background:{% if cat=='error' %}rgba(239,68,68,0.1){% elif cat=='success' %}rgba(16,185,129,0.1){% else %}rgba(245,158,11,0.1){% endif %};
+      border:1px solid {% if cat=='error' %}rgba(239,68,68,0.3){% elif cat=='success' %}rgba(16,185,129,0.3){% else %}rgba(245,158,11,0.3){% endif %};
+      color:{% if cat=='error' %}#ef4444{% elif cat=='success' %}#10b981{% else %}#f59e0b{% endif %};">
+      {{ msg }}
+    </div>
+  {% endfor %}
+{% endwith %}
+
+<!-- TURNOUT STATS -->
+<div class="turnout-grid" style="margin-bottom:24px;">
+  <div class="turnout-card">
+    <div class="turnout-num">{{ total_votes }}</div>
+    <div class="turnout-label">Total Votes Cast</div>
+  </div>
+  <div class="turnout-card">
+    <div class="turnout-num">{{ eligible }}</div>
+    <div class="turnout-label">Eligible Voters</div>
+  </div>
+  <div class="turnout-card">
+    <div class="turnout-num" style="color:{% if turnout_pct >= 60 %}var(--success){% elif turnout_pct >= 30 %}var(--warn){% else %}var(--danger){% endif %};">
+      {{ turnout_pct }}%
+    </div>
+    <div class="turnout-label">Voter Turnout</div>
+  </div>
+</div>
+
+<div style="display:grid;grid-template-columns:2fr 1fr;gap:24px;align-items:start;">
+
+  <!-- RESULTS BAR CHART -->
+  <div class="card" style="margin:0;">
+    <h2 style="font-family:var(--font-display);font-size:18px;font-weight:700;color:var(--text-0);margin-bottom:20px;">Candidate Results</h2>
+
+    {% if candidates %}
+      {% for c in candidates %}
+      <div class="results-row" style="margin-bottom:20px;">
+        <div class="results-info" style="display:flex;justify-content:space-between;margin-bottom:8px;">
+          <div>
+            <div class="results-name" style="font-weight:600;color:var(--text-0);{% if loop.first and total_votes > 0 %}color:var(--success);{% endif %}">
+              {% if loop.first and total_votes > 0 %}🏆 {% endif %}{{ c.candidate_name }}
+            </div>
+            <div class="results-party" style="font-size:12px;color:var(--text-2);">{{ c.party_name or 'Independent' }} · {{ c.position }}</div>
+          </div>
+          <div class="results-votes" style="text-align:right;">
+            <div style="font-family:var(--font-mono);font-size:16px;font-weight:700;color:var(--text-0);">{{ c.vote_count }}</div>
+            <div style="font-size:11px;color:var(--text-2);">{{ c.vote_pct }}%</div>
+          </div>
+        </div>
+        <div class="results-bar-wrap" style="height:8px;background:rgba(255,255,255,0.05);border-radius:4px;overflow:hidden;">
+          <div class="results-bar {% if loop.first and total_votes > 0 %}winner{% endif %}" style="height:100%;background:{% if loop.first and total_votes > 0 %}var(--success){% else %}var(--text-2){% endif %};width:{{ c.bar_pct }}%;transition:width 1s cubic-bezier(0.4, 0, 0.2, 1);"></div>
+        </div>
+      </div>
+      {% endfor %}
+    {% else %}
+    <div class="empty-state">
+      <div class="empty-state-icon">📊</div>
+      <div class="empty-state-title">No candidates added</div>
+      <p>Add candidates to this election first.</p>
+    </div>
+    {% endif %}
+  </div>
+
+  <!-- ELECTION INFO SIDEBAR -->
+  <div class="card" style="margin:0;">
+    <h3 style="font-size:14px;font-weight:600;color:var(--text-0);margin-bottom:16px;text-transform:uppercase;letter-spacing:0.05em;">Election Details</h3>
+    <div style="display:flex;flex-direction:column;gap:16px;">
+      <div>
+        <div style="font-size:11px;color:var(--text-2);text-transform:uppercase;margin-bottom:4px;">Description</div>
+        <div style="font-size:13px;color:var(--text-1);line-height:1.5;">{{ election.description or 'No description provided.' }}</div>
+      </div>
+      <div>
+        <div style="font-size:11px;color:var(--text-2);text-transform:uppercase;margin-bottom:4px;">Position Role</div>
+        <div style="font-size:13px;color:var(--text-1);">{{ election.position_role or 'Not specified' }}</div>
+      </div>
+      <div>
+        <div style="font-size:11px;color:var(--text-2);text-transform:uppercase;margin-bottom:4px;">Eligibility Type</div>
+        <div style="font-size:13px;color:var(--text-1);">
+          {% if election.eligible_type == 'department' %}
+            Specific Departments
+          {% elif election.eligible_type == 'specific' %}
+            Specific Roll Numbers
+          {% else %}
+            All Registered Voters
+          {% endif %}
+        </div>
+      </div>
+      
+      {% if election.status != 'ended' %}
+      <div class="info-callout" style="padding:10px;margin-top:8px;">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+        <div style="font-size:11px;">Results can only be published to voters after the election has officially ended.</div>
+      </div>
+      {% endif %}
+    </div>
+  </div>
+
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+// Animate bars on load
+document.addEventListener('DOMContentLoaded', function() {
+  var bars = document.querySelectorAll('.results-bar');
+  bars.forEach(function(bar) {
+    var target = bar.style.width;
+    bar.style.width = '0%';
+    setTimeout(function() { bar.style.width = target; }, 100);
+  });
+});
+</script>
+{% endblock %}
