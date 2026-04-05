@@ -1,6 +1,7 @@
 import sqlite3
 import random
 from datetime import datetime, timedelta
+from database import init_db
 
 DB_PATH = 'election.db'
 
@@ -11,6 +12,7 @@ def get_db():
 
 def seed():
     print("Seeding database with quality sample data...")
+    init_db() # Ensure tables exist first
     db = get_db()
     
     # Enable foreign keys
