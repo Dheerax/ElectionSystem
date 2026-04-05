@@ -21,12 +21,15 @@ def get_face_app():
     global _face_app
     if _face_app is None:
         try:
+            import os
+            os.environ['OMP_NUM_THREADS'] = '1'
             import insightface
             from insightface.app import FaceAnalysis
-            app = FaceAnalysis(name='buffalo_sc', providers=['CPUExecutionProvider'])
+            model_path = os.path.join(os.path.dirname(__file__), 'insightface_model')
+            app = FaceAnalysis(name='buffalo_sc', root=model_path, providers=['CPUExecutionProvider'])
             app.prepare(ctx_id=0, det_size=(320, 320))
             _face_app = app
-            logger.info("InsightFace ArcFace model loaded successfully.")
+            logger.info("InsightFace ArcFace model loaded successfully from local directory.")
         except Exception as e:
             logger.error(f"Failed to load InsightFace model: {e}")
             _face_app = None
