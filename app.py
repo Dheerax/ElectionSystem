@@ -324,23 +324,10 @@ def register_post():
     # ── Hash password ──
     pw_hash = generate_password_hash(password)
 
-    # ── Encode face synchronously before saving ──
-    from face_service import extract_face_encoding, encoding_to_b64
-    embedding = extract_face_encoding(photo)
-    
-    if embedding is None:
-        db.close()
-        return jsonify(
-            error='Could not detect a clear face. Please ensure you are well-lit and looking directly at the camera.',
-            code='FACE_ENCODE_FAILED'
-        ), 400
-        
-    enc_b64 = encoding_to_b64(embedding)
-
-    # ── Save registration with face encoding ──
+    # ── Save registration with empty face data (encoded in background) ──
     db.execute(
-        "UPDATE voters SET email=?, phone=?, photo=?, face_encoding=?, password_hash=?, department=?, is_registered=1 WHERE voter_id=?",
-        (email, phone, db_photo_path, enc_b64, pw_hash, department, voter['voter_id'])
+        "UPDATE voters SET email=?, phone=?, photo=?, face_encoding=NULL, password_hash=?, department=?, is_registered=1 WHERE voter_id=?",
+        (email, phone, db_photo_path, pw_hash, department, voter['voter_id'])
     )
     db.commit()
 
@@ -351,7 +338,32 @@ def register_post():
     except Exception as e:
         logger.error(f"Registration email error: {e}")
 
+    voter_id = voter['voter_id']
     db.close()
+
+    # ── Encode face safely in a background thread ──
+    # Since the 85MB model is no longer being downloaded, this will work.
+    def _encode_face_background(vid, photo_b64):
+        try:
+            import time
+            time.sleep(1) # Let HTTP request finish
+            from face_service import extract_face_encoding, encoding_to_b64
+            embedding = extract_face_encoding(photo_b64)
+            if embedding is not None:
+                enc_b64 = encoding_to_b64(embedding)
+                bg_db = get_db()
+                bg_db.execute("UPDATE voters SET face_encoding=? WHERE voter_id=?", (enc_b64, vid))
+                bg_db.commit()
+                bg_db.close()
+                logger.info(f"Face correctly encoded and saved in background for {vid}")
+            else:
+                logger.warning(f"Face extraction failed in background for {vid}")
+        except Exception as ex:
+            logger.error(f"Background thread face exception for {vid}: {ex}")
+
+    import threading
+    t = threading.Thread(target=_encode_face_background, args=(voter_id, photo), daemon=True)
+    t.start()
 
     return jsonify(success=True, redirect='/voter/login'), 200
 

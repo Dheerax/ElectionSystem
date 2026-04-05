@@ -26,7 +26,7 @@ def get_face_app():
             import insightface
             from insightface.app import FaceAnalysis
             model_path = os.path.join(os.path.dirname(__file__), 'insightface_model')
-            app = FaceAnalysis(name='buffalo_sc', root=model_path, providers=['CPUExecutionProvider'])
+            app = FaceAnalysis(name='buffalo_sc', root=model_path, allowed_modules=['detection', 'recognition'], providers=['CPUExecutionProvider'])
             app.prepare(ctx_id=0, det_size=(320, 320))
             _face_app = app
             logger.info("InsightFace ArcFace model loaded successfully from local directory.")
@@ -44,6 +44,12 @@ def _base64_to_cv2(b64_string):
             b64_string = b64_string.split(',', 1)[1]
         img_bytes = base64.b64decode(b64_string)
         pil_img = Image.open(BytesIO(img_bytes)).convert('RGB')
+        
+        # --- RESIZE IMAGE TO SAVE MASSIVE MEMORY ON RENDER ---
+        # 640x640 is plenty for face recognition, but stops 1080p+ webcams from 
+        # blowing out the 512MB RAM limit during ONNX inference pyramids
+        pil_img.thumbnail((640, 640), Image.Resampling.LANCZOS)
+        
         img_np = np.array(pil_img)
         # PIL is RGB, convert to BGR for cv2/InsightFace
         img_bgr = img_np[:, :, ::-1].copy()
