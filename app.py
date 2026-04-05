@@ -331,23 +331,29 @@ def register_post():
     )
     db.commit()
 
-    # ── Send registration email (non-blocking) ──
-    try:
-        from email_service import send_registration_email
-        send_registration_email(mail, email, voter['name'], roll_number)
-    except Exception as e:
-        logger.error(f"Registration email error: {e}")
-
     voter_id = voter['voter_id']
+    voter_name = voter['name']
     db.close()
 
-    # ── Encode face safely in a background thread ──
-    # Since the 85MB model is no longer being downloaded, this will work.
-    def _encode_face_background(vid, photo_b64):
+    logger.info(f"DB save done for {roll_number}. Starting background thread...")
+
+    # ── Encode face + send email in background thread ──
+    def _encode_face_background(vid, photo_b64, v_email, v_name, v_roll):
         try:
             import time
-            time.sleep(1) # Let HTTP request finish
+            time.sleep(1)  # Let HTTP request finish first
+
+            # Send registration email (moved here so it doesn't block HTTP response)
+            try:
+                from email_service import send_registration_email
+                send_registration_email(mail, v_email, v_name, v_roll)
+                logger.info(f"Registration email sent for {v_roll}")
+            except Exception as e:
+                logger.error(f"Registration email error: {e}")
+
+            # Encode face via Hugging Face API
             from face_service import extract_face_encoding, encoding_to_b64
+            logger.info(f"Starting face encoding for voter {vid} via HF API...")
             embedding = extract_face_encoding(photo_b64)
             if embedding is not None:
                 enc_b64 = encoding_to_b64(embedding)
@@ -355,16 +361,17 @@ def register_post():
                 bg_db.execute("UPDATE voters SET face_encoding=? WHERE voter_id=?", (enc_b64, vid))
                 bg_db.commit()
                 bg_db.close()
-                logger.info(f"Face correctly encoded and saved in background for {vid}")
+                logger.info(f"Face encoded and saved for voter {vid}")
             else:
-                logger.warning(f"Face extraction failed in background for {vid}")
+                logger.warning(f"Face extraction returned None for voter {vid}")
         except Exception as ex:
-            logger.error(f"Background thread face exception for {vid}: {ex}")
+            logger.error(f"Background thread exception for voter {vid}: {ex}")
 
     import threading
-    t = threading.Thread(target=_encode_face_background, args=(voter_id, photo), daemon=True)
+    t = threading.Thread(target=_encode_face_background, args=(voter_id, photo, email, voter_name, roll_number), daemon=True)
     t.start()
 
+    logger.info(f"Returning 200 success for {roll_number}")
     return jsonify(success=True, redirect='/voter/login'), 200
 
 
