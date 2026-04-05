@@ -312,9 +312,20 @@ function startCam() {
 function capturePhoto() {
   var vid    = document.getElementById('webcamVideo');
   var canvas = document.getElementById('webcamCanvas');
-  canvas.width = vid.videoWidth; canvas.height = vid.videoHeight;
-  canvas.getContext('2d').drawImage(vid, 0, 0);
-  photoData = canvas.toDataURL('image/jpeg', 0.85);
+
+  // --- Downscale to max 480px before encoding ---
+  // This reduces the base64 payload from ~400KB to ~30KB,
+  // preventing the Render load balancer from timing out the connection.
+  var MAX = 480;
+  var w = vid.videoWidth, h = vid.videoHeight;
+  if (w > MAX || h > MAX) {
+    var ratio = Math.min(MAX / w, MAX / h);
+    w = Math.round(w * ratio);
+    h = Math.round(h * ratio);
+  }
+  canvas.width = w; canvas.height = h;
+  canvas.getContext('2d').drawImage(vid, 0, 0, w, h);
+  photoData = canvas.toDataURL('image/jpeg', 0.75);
   var img = document.getElementById('capturedImg');
   img.src = photoData; img.style.display = 'block';
   vid.style.display = 'none';
