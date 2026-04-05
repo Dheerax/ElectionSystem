@@ -591,18 +591,24 @@ def vote_submit(election_id):
         (voter['voter_id'],)
     )
     db.commit()
-
-    # Send vote confirmation email
-    try:
-        if voter['email']:
-            send_vote_confirmation_email(
-                mail, voter['email'], voter['name'],
-                election['election_title'], timestamp
-            )
-    except Exception as e:
-        logger.error(f"Vote email error: {e}")
-
     db.close()
+
+    # Send vote confirmation email in the background
+    if voter['email']:
+        def _send_vote_email(v_email, v_name, e_title, v_timestamp):
+            try:
+                import time
+                time.sleep(1) # Let HTTP finish
+                from email_service import send_vote_confirmation_email
+                send_vote_confirmation_email(mail, v_email, v_name, e_title, v_timestamp)
+                logger.info(f"Vote confirmation email sent for voter ID {voter['voter_id']}")
+            except Exception as e:
+                logger.error(f"Vote email error: {e}")
+        
+        import threading
+        t = threading.Thread(target=_send_vote_email, args=(voter['email'], voter['name'], election['election_title'], timestamp), daemon=True)
+        t.start()
+
     return jsonify(success=True, message='Your vote has been cast successfully!'), 200
 
 
