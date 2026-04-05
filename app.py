@@ -1498,11 +1498,15 @@ def care_complaint_reject(complaint_id):
 with app.app_context():
     init_db()
 
-# Preload ArcFace model in the main thread to prevent ONNX segment faults on Windows
-from face_service import get_face_app
-print("Initializing ArcFace Model...")
-get_face_app()
-print("ArcFace loaded.")
+# NOTE: ArcFace model is intentionally NOT preloaded here.
+# Preloading in the gunicorn master process causes the model to be
+# duplicated into every forked worker (fork = copy-on-write), using 2x RAM
+# and causing OOM crashes on Render's 512MB free tier.
+# The model lazy-loads on the first background encoding thread run.
 
 if __name__ == '__main__':
-    app.run(debug=True, port=5000, threaded=False)
+    # In local dev, preload for convenience (no forking happens)
+    from face_service import get_face_app
+    get_face_app()
+    app.run(debug=True, port=5000, threaded=True)
+
