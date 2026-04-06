@@ -339,33 +339,34 @@ def register_post():
 
     # ── Encode face + send email in background thread ──
     def _encode_face_background(vid, photo_b64, v_email, v_name, v_roll):
-        try:
-            import time
-            time.sleep(1)  # Let HTTP request finish first
-
-            # Send registration email (moved here so it doesn't block HTTP response)
+        with app.app_context():
             try:
-                from email_service import send_registration_email
-                send_registration_email(mail, v_email, v_name, v_roll)
-                logger.info(f"Registration email sent for {v_roll}")
-            except Exception as e:
-                logger.error(f"Registration email error: {e}")
-
-            # Encode face via Hugging Face API
-            from face_service import extract_face_encoding, encoding_to_b64
-            logger.info(f"Starting face encoding for voter {vid} via HF API...")
-            embedding = extract_face_encoding(photo_b64)
-            if embedding is not None:
-                enc_b64 = encoding_to_b64(embedding)
-                bg_db = get_db()
-                bg_db.execute("UPDATE voters SET face_encoding=? WHERE voter_id=?", (enc_b64, vid))
-                bg_db.commit()
-                bg_db.close()
-                logger.info(f"Face encoded and saved for voter {vid}")
-            else:
-                logger.warning(f"Face extraction returned None for voter {vid}")
-        except Exception as ex:
-            logger.error(f"Background thread exception for voter {vid}: {ex}")
+                import time
+                time.sleep(1)  # Let HTTP request finish first
+    
+                # Send registration email (moved here so it doesn't block HTTP response)
+                try:
+                    from email_service import send_registration_email
+                    send_registration_email(mail, v_email, v_name, v_roll)
+                    logger.info(f"Registration email sent for {v_roll}")
+                except Exception as e:
+                    logger.error(f"Registration email error: {e}")
+    
+                # Encode face via Hugging Face API
+                from face_service import extract_face_encoding, encoding_to_b64
+                logger.info(f"Starting face encoding for voter {vid} via HF API...")
+                embedding = extract_face_encoding(photo_b64)
+                if embedding is not None:
+                    enc_b64 = encoding_to_b64(embedding)
+                    bg_db = get_db()
+                    bg_db.execute("UPDATE voters SET face_encoding=? WHERE voter_id=?", (enc_b64, vid))
+                    bg_db.commit()
+                    bg_db.close()
+                    logger.info(f"Face encoded and saved for voter {vid}")
+                else:
+                    logger.warning(f"Face extraction returned None for voter {vid}")
+            except Exception as ex:
+                logger.error(f"Background thread exception for voter {vid}: {ex}")
 
     import threading
     t = threading.Thread(target=_encode_face_background, args=(voter_id, photo, email, voter_name, roll_number), daemon=True)
@@ -596,14 +597,15 @@ def vote_submit(election_id):
     # Send vote confirmation email in the background
     if voter['email']:
         def _send_vote_email(v_email, v_name, e_title, v_timestamp):
-            try:
-                import time
-                time.sleep(1) # Let HTTP finish
-                from email_service import send_vote_confirmation_email
-                send_vote_confirmation_email(mail, v_email, v_name, e_title, v_timestamp)
-                logger.info(f"Vote confirmation email sent for voter ID {voter['voter_id']}")
-            except Exception as e:
-                logger.error(f"Vote email error: {e}")
+            with app.app_context():
+                try:
+                    import time
+                    time.sleep(1) # Let HTTP finish
+                    from email_service import send_vote_confirmation_email
+                    send_vote_confirmation_email(mail, v_email, v_name, e_title, v_timestamp)
+                    logger.info(f"Vote confirmation email sent for voter ID {voter['voter_id']}")
+                except Exception as e:
+                    logger.error(f"Vote email error: {e}")
         
         import threading
         t = threading.Thread(target=_send_vote_email, args=(voter['email'], voter['name'], election['election_title'], timestamp), daemon=True)
