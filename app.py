@@ -1078,14 +1078,15 @@ def admin_election_create():
     log_admin_action('Created Election', title)
 
     def send_announcements():
-        for email_addr, voter_name in recipients:
-            try:
-                send_election_announcement(
-                    mail, email_addr, voter_name,
-                    title, description, position_role, start_date, end_date
-                )
-            except Exception as ex:
-                logger.error(f"Announcement email failed to {email_addr}: {ex}")
+        with app.app_context():
+            for email_addr, voter_name in recipients:
+                try:
+                    send_election_announcement(
+                        mail, email_addr, voter_name,
+                        title, description, position_role, start_date, end_date
+                    )
+                except Exception as ex:
+                    logger.error(f"Announcement email failed to {email_addr}: {ex}")
 
     if recipients:
         t = threading.Thread(target=send_announcements, daemon=True)
@@ -1207,18 +1208,19 @@ def admin_publish_results(election_id):
 
     if winner:
         def send_results_emails():
-            for email_addr, voter_name in recipients:
-                try:
-                    send_election_results(
-                        mail, email_addr, voter_name,
-                        election['election_title'],
-                        election['position_role'] or '',
-                        winner['candidate_name'],
-                        winner['party_name'] or '',
-                        total_votes
-                    )
-                except Exception as ex:
-                    logger.error(f"Results email failed to {email_addr}: {ex}")
+            with app.app_context():
+                for email_addr, voter_name in recipients:
+                    try:
+                        send_election_results(
+                            mail, email_addr, voter_name,
+                            election['election_title'],
+                            election['position_role'] or '',
+                            winner['candidate_name'],
+                            winner['party_name'] or '',
+                            total_votes
+                        )
+                    except Exception as ex:
+                        logger.error(f"Results email failed to {email_addr}: {ex}")
 
         t = threading.Thread(target=send_results_emails, daemon=True)
         t.start()
@@ -1461,16 +1463,21 @@ def care_complaint_resolve(complaint_id):
     db.close()
 
     if admin_response and complaint['email']:
-        try:
-            from flask_mail import Message
-            msg = Message(
-                subject=f"Update on your Support Case #{complaint_id}",
-                recipients=[complaint['email']],
-                body=f"Hello {complaint['name']},\n\nYour support case #{complaint_id} has been resolved.\n\nMessage from Customer Care:\n{admin_response}\n\nRegards,\nIEIS Customer Care"
-            )
-            mail.send(msg)
-        except Exception as e:
-            logger.error(f"Failed to send care email: {e}")
+        def _send_care_resolve_email(c_email, c_name, c_id, a_resp):
+            with app.app_context():
+                try:
+                    from flask_mail import Message
+                    msg = Message(
+                        subject=f"Update on your Support Case #{c_id}",
+                        recipients=[c_email],
+                        body=f"Hello {c_name},\n\nYour support case #{c_id} has been resolved.\n\nMessage from Customer Care:\n{a_resp}\n\nRegards,\nIEIS Customer Care"
+                    )
+                    mail.send(msg)
+                except Exception as e:
+                    logger.error(f"Failed to send care email: {e}")
+
+        t = threading.Thread(target=_send_care_resolve_email, args=(complaint['email'], complaint['name'], complaint_id, admin_response), daemon=True)
+        t.start()
 
     flash('Support case resolved and voter notified.', 'success')
     return redirect(url_for('care_dashboard'))
@@ -1492,16 +1499,21 @@ def care_complaint_reject(complaint_id):
     db.close()
 
     if admin_response and complaint['email']:
-        try:
-            from flask_mail import Message
-            msg = Message(
-                subject=f"Update on your Support Case #{complaint_id}",
-                recipients=[complaint['email']],
-                body=f"Hello {complaint['name']},\n\nYour support case #{complaint_id} has been closed.\n\nMessage from Customer Care:\n{admin_response}\n\nRegards,\nIEIS Customer Care"
-            )
-            mail.send(msg)
-        except Exception as e:
-            logger.error(f"Failed to send care email: {e}")
+        def _send_care_reject_email(c_email, c_name, c_id, a_resp):
+            with app.app_context():
+                try:
+                    from flask_mail import Message
+                    msg = Message(
+                        subject=f"Update on your Support Case #{c_id}",
+                        recipients=[c_email],
+                        body=f"Hello {c_name},\n\nYour support case #{c_id} has been closed.\n\nMessage from Customer Care:\n{a_resp}\n\nRegards,\nIEIS Customer Care"
+                    )
+                    mail.send(msg)
+                except Exception as e:
+                    logger.error(f"Failed to send care email: {e}")
+
+        t = threading.Thread(target=_send_care_reject_email, args=(complaint['email'], complaint['name'], complaint_id, admin_response), daemon=True)
+        t.start()
 
     flash('Support case rejected.', 'success')
     return redirect(url_for('care_dashboard'))
