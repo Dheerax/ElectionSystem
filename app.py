@@ -544,7 +544,7 @@ def vote_submit(election_id):
 
     # Verify candidate belongs to this election
     valid_candidate = db.execute(
-        "SELECT 1 FROM candidates WHERE candidate_id=? AND election_id=?",
+        "SELECT candidate_name FROM candidates WHERE candidate_id=? AND election_id=?",
         (candidate_id, election_id)
     ).fetchone()
     if not valid_candidate:
@@ -596,19 +596,21 @@ def vote_submit(election_id):
 
     # Send vote confirmation email in the background
     if voter['email']:
-        def _send_vote_email(v_email, v_name, e_title, v_timestamp):
+        def _send_vote_email(v_email, v_name, e_title, c_name, v_timestamp):
             with app.app_context():
                 try:
                     import time
                     time.sleep(1) # Let HTTP finish
                     from email_service import send_vote_confirmation_email
-                    send_vote_confirmation_email(mail, v_email, v_name, e_title, v_timestamp)
-                    logger.info(f"Vote confirmation email sent for voter ID {voter['voter_id']}")
+                    send_vote_confirmation_email(mail, v_email, v_name, e_title, c_name, v_timestamp)
+                    logger.info(f"Vote confirmation email sent for voter ID {voter_id}")
                 except Exception as e:
                     logger.error(f"Vote email error: {e}")
         
+        voter_id = voter['voter_id']
+        c_name = valid_candidate['candidate_name']
         import threading
-        t = threading.Thread(target=_send_vote_email, args=(voter['email'], voter['name'], election['election_title'], timestamp), daemon=True)
+        t = threading.Thread(target=_send_vote_email, args=(voter['email'], voter['name'], election['election_title'], c_name, timestamp), daemon=True)
         t.start()
 
     return jsonify(success=True, message='Your vote has been cast successfully!'), 200

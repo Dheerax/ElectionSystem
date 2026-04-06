@@ -25,12 +25,12 @@ Sri Venkatesa Perumal College of Engineering & Technology"""
         logger.error(f"Failed to send registration email to {to_email}: {e}")
 
 
-def send_vote_confirmation_email(mail, to_email, voter_name, election_title, timestamp):
+def send_vote_confirmation_email(mail, to_email, voter_name, election_title, candidate_name, timestamp):
     try:
         subject = "Vote Confirmed — IEIS"
         body = f"""Hello {voter_name},
 
-Your vote in "{election_title}" has been successfully recorded.
+Your vote for "{candidate_name}" in the election "{election_title}" has been successfully recorded.
 
 Timestamp   : {timestamp} UTC
 Your vote is secure and will be counted in the final results.
