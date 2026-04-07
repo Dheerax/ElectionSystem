@@ -579,7 +579,11 @@ def vote_submit(election_id):
         ), 403
 
     # ── Record vote ──
-    ip_address = request.remote_addr
+    # Render puts the real user IP in the X-Forwarded-For header
+    ip_address = request.headers.get('X-Forwarded-For', request.remote_addr)
+    if ip_address:
+        ip_address = ip_address.split(',')[0].strip()
+        
     location   = fetch_location(ip_address)
     timestamp  = datetime.utcnow().isoformat() + 'Z'
 
