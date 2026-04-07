@@ -1,50 +1,72 @@
 """
-face_service.py — ArcFace face encoding and verification via API.
+face_service.py — ArcFace face encoding and verification via HuggingFace API.
 
-This version proxy image data to a Hugging Face Space (or external API)
-to offload memory-heavy AI processing from Render's free tier.
+Handles cold-start delays: HF free Spaces go to sleep and can take 20-40 seconds
+to wake up. We retry up to 3 times with increasing delays.
 """
 
 import base64
 import logging
+import time
 import numpy as np
 import requests
 import os
 
 logger = logging.getLogger(__name__)
 
-# Fallback fake URL so the code doesn't crash on boot
 HF_API_URL = os.environ.get("HUGGINGFACE_API_URL", "https://your-space-name.hf.space")
+
+_MAX_RETRIES = 3
+_RETRY_DELAYS = [5, 10, 15]   # seconds between retries
+
 
 def extract_face_encoding(b64_image):
     """
     Given a base64 image string, detect a face and return its 512-d ArcFace embedding
-    by querying the Hugging Face API.
+    by querying the Hugging Face API. Retries on network/timeout errors to handle
+    HF Space cold-start delays.
     """
     if "your-space-name" in HF_API_URL:
         logger.error("HUGGINGFACE_API_URL environment variable is not set!")
         return None
 
-    try:
-        req_url = f"{HF_API_URL}/encode"
-        # Ensure correct protocol if omitted
-        if not req_url.startswith("http"):
-            req_url = "https://" + req_url
-            
-        logger.info(f"Sending face to Hugging Face API: {req_url}")
-        res = requests.post(req_url, json={"b64_image": b64_image}, timeout=30)
-        res.raise_for_status()
-        data = res.json()
-        
-        if data.get("success"):
-            embedding_list = data.get("embedding")
-            return np.array(embedding_list, dtype=np.float32)
-        else:
-            logger.warning(f"Face API failed: {data.get('error')}")
+    req_url = HF_API_URL.rstrip("/") + "/encode"
+    if not req_url.startswith("http"):
+        req_url = "https://" + req_url
+
+    for attempt in range(1, _MAX_RETRIES + 1):
+        try:
+            logger.info(f"Sending face to HF API (attempt {attempt}/{_MAX_RETRIES}): {req_url}")
+            res = requests.post(
+                req_url,
+                json={"b64_image": b64_image},
+                timeout=45,   # HF cold starts can take ~30s
+            )
+            res.raise_for_status()
+            data = res.json()
+
+            if data.get("success"):
+                embedding_list = data.get("embedding")
+                logger.info("Face encoding received successfully from HF API.")
+                return np.array(embedding_list, dtype=np.float32)
+            else:
+                logger.warning(f"Face API returned failure: {data.get('error')}")
+                return None   # Definitive API error — no point retrying
+        except requests.exceptions.Timeout:
+            logger.warning(f"HF API timed out on attempt {attempt}.")
+        except requests.exceptions.ConnectionError as e:
+            logger.warning(f"HF API connection error on attempt {attempt}: {e}")
+        except Exception as e:
+            logger.error(f"Unexpected error on attempt {attempt}: {e}")
             return None
-    except Exception as e:
-        logger.error(f"Failed to communicate with Face API: {e}")
-        return None
+
+        if attempt < _MAX_RETRIES:
+            delay = _RETRY_DELAYS[attempt - 1]
+            logger.info(f"Retrying in {delay}s...")
+            time.sleep(delay)
+
+    logger.error("All HF API attempts failed — face encoding returned None.")
+    return None
 
 
 def encoding_to_b64(embedding):
@@ -68,7 +90,8 @@ def b64_to_encoding(b64_str):
 
 def verify_face(stored_b64_encoding, live_b64_image, threshold=0.40):
     """
-    Compare a stored face encoding (b64) against a live captured image (b64) via API.
+    Compare a stored face encoding (b64) against a live captured image (b64).
+    Returns (matched: bool, similarity: float | None).
     """
     if not stored_b64_encoding:
         logger.warning("No stored face encoding for this voter.")
@@ -80,14 +103,15 @@ def verify_face(stored_b64_encoding, live_b64_image, threshold=0.40):
 
     live_enc = extract_face_encoding(live_b64_image)
     if live_enc is None:
-        return False, None  # No face detected in live image or api failed
+        return False, None   # HF API unreachable or no face detected
 
-    # Cosine similarity (both are L2-normalised → dot product = cosine)
+    # Cosine similarity (both embeddings are L2-normalised → dot product = cosine)
     similarity = float(np.dot(stored_enc, live_enc))
     matched = similarity >= threshold
     logger.info(f"Face verification: similarity={similarity:.3f}, matched={matched}")
     return matched, round(similarity, 3)
 
+
 def get_face_app():
-    # Backwards compatibility for app.py imports, does nothing
+    """Backwards compatibility shim — does nothing."""
     pass

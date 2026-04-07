@@ -11,7 +11,6 @@ from io import StringIO, BytesIO
 
 from flask import (Flask, render_template, request, redirect, url_for,
                    session, flash, jsonify, abort)
-from flask_mail import Mail
 from werkzeug.security import generate_password_hash, check_password_hash
 from werkzeug.utils import secure_filename
 from dotenv import load_dotenv, set_key
@@ -19,7 +18,8 @@ from openpyxl import load_workbook
 
 from database import get_db, init_db, SVPCET_DEPARTMENTS
 from email_service import (send_registration_email, send_vote_confirmation_email,
-                            send_election_announcement, send_election_results)
+                            send_election_announcement, send_election_results,
+                            send_care_response_email)
 from helpers import fetch_location
 from face_service import extract_face_encoding, encoding_to_b64, verify_face
 
@@ -39,14 +39,6 @@ app.config['ADMIN_PASS'] = 'admin123'
 app.config['CARE_USER'] = 'care'
 app.config['CARE_PASS'] = 'care123'
 
-# ── Mail configuration ──
-app.config['MAIL_SERVER']         = os.environ.get('MAIL_SERVER', 'smtp.gmail.com')
-app.config['MAIL_PORT']           = int(os.environ.get('MAIL_PORT', 587))
-app.config['MAIL_USE_TLS']        = os.environ.get('MAIL_USE_TLS', 'True') == 'True'
-app.config['MAIL_USERNAME']       = os.environ.get('MAIL_USER')
-app.config['MAIL_PASSWORD']       = os.environ.get('MAIL_PASS')
-app.config['MAIL_DEFAULT_SENDER'] = os.environ.get('MAIL_USER')
-
 # ── Upload folders ──
 SYMBOL_UPLOAD_DIR    = os.path.join(app.root_path, 'static', 'uploads', 'symbols')
 COMPLAINT_UPLOAD_DIR = os.path.join(app.root_path, 'static', 'uploads', 'complaints')
@@ -60,12 +52,14 @@ ALLOWED_IMAGE_EXTS = {'.jpg', '.jpeg', '.png', '.gif', '.svg', '.webp'}
 ALLOWED_DOC_EXTS   = {'.jpg', '.jpeg', '.png', '.pdf'}
 ALLOWED_EXCEL_EXTS = {'.xlsx', '.xls'}
 
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
+
 # SVPCET roll number format: 22G01A4321
 ROLL_NO_REGEX = re.compile(r'^\d{2}G01A\d{4}$', re.IGNORECASE)
 
-mail = Mail(app)
-logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger(__name__)
+# mail stub — email now sent via Resend HTTP API in email_service.py
+mail = None
 
 
 # ─────────────────────────────────────────────────────────
@@ -565,7 +559,7 @@ def vote_submit(election_id):
         if similarity is None:
             if not voter['face_encoding']:
                 return jsonify(
-                    error='Face profile data missing in database. Please contact support to re-register.',
+                    error='Your face profile is still being processed. Please wait 30 seconds and try again. If this persists, contact support.',
                     code='NO_PROFILE_FACE'
                 ), 403
             else:
@@ -791,23 +785,24 @@ def admin_dashboard():
 def admin_settings():
     env_path = os.path.join(app.root_path, '.env')
     if request.method == 'POST':
-        mail_user = request.form.get('mail_user', '').strip()
-        mail_pass = request.form.get('mail_pass', '').strip()
-        if mail_user:
-            set_key(env_path, 'MAIL_USER', mail_user)
-        if mail_pass:
-            set_key(env_path, 'MAIL_PASS', mail_pass)
-        app.config['MAIL_USERNAME']       = mail_user
-        if mail_pass:
-            app.config['MAIL_PASSWORD'] = mail_pass
-        app.config['MAIL_DEFAULT_SENDER'] = mail_user
-        global mail
-        mail = Mail(app)
-        log_admin_action('Updated SMTP Settings', 'System')
-        flash('SMTP Settings saved successfully.', 'success')
+        resend_key  = request.form.get('resend_key', '').strip()
+        mail_from   = request.form.get('mail_from', '').strip()
+        if resend_key:
+            set_key(env_path, 'RESEND_API_KEY', resend_key)
+            os.environ['RESEND_API_KEY'] = resend_key
+            import email_service
+            email_service.RESEND_API_KEY = resend_key
+        if mail_from:
+            set_key(env_path, 'MAIL_FROM', mail_from)
+            os.environ['MAIL_FROM'] = mail_from
+            import email_service
+            email_service.MAIL_FROM = mail_from
+        log_admin_action('Updated Email Settings', 'System')
+        flash('Email settings saved successfully.', 'success')
         return redirect(url_for('admin_settings'))
-    current_user = os.environ.get('MAIL_USER') or app.config.get('MAIL_USERNAME', '')
-    return render_template('admin/settings.html', mail_user=current_user)
+    current_key  = os.environ.get('RESEND_API_KEY', '')
+    current_from = os.environ.get('MAIL_FROM', '')
+    return render_template('admin/settings.html', resend_key=current_key, mail_from=current_from)
 
 
 # ─────────────────────────────────────────────────────────
@@ -1470,17 +1465,7 @@ def care_complaint_resolve(complaint_id):
 
     if admin_response and complaint['email']:
         def _send_care_resolve_email(c_email, c_name, c_id, a_resp):
-            with app.app_context():
-                try:
-                    from flask_mail import Message
-                    msg = Message(
-                        subject=f"Update on your Support Case #{c_id}",
-                        recipients=[c_email],
-                        body=f"Hello {c_name},\n\nYour support case #{c_id} has been resolved.\n\nMessage from Customer Care:\n{a_resp}\n\nRegards,\nIEIS Customer Care"
-                    )
-                    mail.send(msg)
-                except Exception as e:
-                    logger.error(f"Failed to send care email: {e}")
+            send_care_response_email(c_email, c_name, c_id, 'resolved', a_resp)
 
         t = threading.Thread(target=_send_care_resolve_email, args=(complaint['email'], complaint['name'], complaint_id, admin_response), daemon=True)
         t.start()
@@ -1506,17 +1491,10 @@ def care_complaint_reject(complaint_id):
 
     if admin_response and complaint['email']:
         def _send_care_reject_email(c_email, c_name, c_id, a_resp):
-            with app.app_context():
-                try:
-                    from flask_mail import Message
-                    msg = Message(
-                        subject=f"Update on your Support Case #{c_id}",
-                        recipients=[c_email],
-                        body=f"Hello {c_name},\n\nYour support case #{c_id} has been closed.\n\nMessage from Customer Care:\n{a_resp}\n\nRegards,\nIEIS Customer Care"
-                    )
-                    mail.send(msg)
-                except Exception as e:
-                    logger.error(f"Failed to send care email: {e}")
+            send_care_response_email(c_email, c_name, c_id, 'rejected', a_resp)
+
+        t = threading.Thread(target=_send_care_reject_email, args=(complaint['email'], complaint['name'], complaint_id, admin_response), daemon=True)
+        t.start()
 
         t = threading.Thread(target=_send_care_reject_email, args=(complaint['email'], complaint['name'], complaint_id, admin_response), daemon=True)
         t.start()
