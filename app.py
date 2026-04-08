@@ -413,6 +413,49 @@ def voter_logout():
     return redirect(url_for('voter_login'))
 
 
+@app.route('/voter/relink-face', methods=['POST'])
+@voter_required
+def voter_relink_face():
+    """
+    Allows a voter to re-submit their face photo for encoding when the
+    background thread during registration failed (HF Space cold start).
+    This runs the encoding synchronously so we can tell the user if it worked.
+    """
+    data = request.get_json(silent=True) or {}
+    face_photo = data.get('face_photo', '')
+    if not face_photo or len(face_photo) < 100:
+        return jsonify(success=False, error='No face photo received.'), 400
+
+    voter_id = session['voter_id']
+    db = get_db()
+    voter = db.execute("SELECT * FROM voters WHERE voter_id=?", (voter_id,)).fetchone()
+    if not voter:
+        db.close()
+        return jsonify(success=False, error='Voter not found.'), 404
+
+    if voter['face_encoding']:
+        db.close()
+        return jsonify(success=True, message='Face profile already exists.'), 200
+
+    # Run encoding synchronously so the user gets immediate feedback
+    embedding = extract_face_encoding(face_photo)
+    if embedding is None:
+        db.close()
+        return jsonify(
+            success=False,
+            error='Face processing server is still waking up. Please wait 30 seconds and try again.'
+        ), 503
+
+    enc_b64 = encoding_to_b64(embedding)
+    db.execute("UPDATE voters SET face_encoding=? WHERE voter_id=?", (enc_b64, voter_id))
+    db.commit()
+    db.close()
+    logger.info(f"Face re-linked successfully for voter {voter_id}")
+    return jsonify(success=True, message='Face profile saved! You can now vote.'), 200
+
+
+
+
 # ─────────────────────────────────────────────────────────
 # VOTER DASHBOARD
 # ─────────────────────────────────────────────────────────
