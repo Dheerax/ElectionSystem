@@ -1,15 +1,16 @@
 """
-email_service.py — Email sending via Resend HTTP API.
+email_service.py — Email sending via Brevo (Sendinblue) HTTP API.
 
-Why Resend instead of Flask-Mail/SMTP?
+Why Brevo instead of Flask-Mail/SMTP?
 Render's Free Tier blocks outbound SMTP ports (25, 465, 587).
-Resend uses HTTPS (port 443) which is always allowed.
+Brevo uses HTTPS (port 443) which is always allowed, and supports Single Sender Verification.
 
 Setup:
-  1. Sign up at https://resend.com (free tier = 3,000 emails/month)
-  2. Get your API key
-  3. Add to Render env: RESEND_API_KEY=re_xxxxxxxxxxxx
-  4. Add to Render env: MAIL_FROM=noreply@yourdomain.com  (or use resend test domain)
+  1. Sign up at https://brevo.com
+  2. Verify your email address by clicking the link they send you.
+  3. Generate an API Key in the dashboard.
+  4. Add to Render env: BREVO_API_KEY=xkeysib-xxxxxxxxxxxx
+  5. Add to Render env: MAIL_FROM=your_verified_email@gmail.com
 """
 
 import os
@@ -18,34 +19,35 @@ import requests
 
 logger = logging.getLogger(__name__)
 
-RESEND_API_KEY = os.environ.get("RESEND_API_KEY", "")
-MAIL_FROM      = os.environ.get("MAIL_FROM", "IEIS Elections <onboarding@resend.dev>")
+BREVO_API_KEY = os.environ.get("BREVO_API_KEY", "")
+MAIL_FROM      = os.environ.get("MAIL_FROM", "dheeraxgamerz@gmail.com")
 
 def _send(to_email: str, subject: str, body: str) -> bool:
-    """Core send function via Resend REST API. Returns True on success."""
-    if not RESEND_API_KEY:
-        logger.warning("RESEND_API_KEY not set — email not sent.")
+    """Core send function via Brevo REST API. Returns True on success."""
+    if not BREVO_API_KEY:
+        logger.warning("BREVO_API_KEY not set — email not sent.")
         return False
     try:
         resp = requests.post(
-            "https://api.resend.com/emails",
+            "https://api.brevo.com/v3/smtp/email",
             headers={
-                "Authorization": f"Bearer {RESEND_API_KEY}",
-                "Content-Type": "application/json",
+                "accept": "application/json",
+                "api-key": BREVO_API_KEY,
+                "content-type": "application/json",
             },
             json={
-                "from": MAIL_FROM,
-                "to": [to_email],
+                "sender": {"name": "IEIS Elections", "email": MAIL_FROM},
+                "to": [{"email": to_email}],
                 "subject": subject,
-                "text": body,
+                "textContent": body,
             },
             timeout=10,
         )
-        if resp.status_code in (200, 201):
-            logger.info(f"Email sent via Resend to {to_email} (subject: {subject!r})")
+        if resp.status_code in (200, 201, 202):
+            logger.info(f"Email sent via Brevo to {to_email} (subject: {subject!r})")
             return True
         else:
-            logger.error(f"Resend API error {resp.status_code}: {resp.text}")
+            logger.error(f"Brevo API error {resp.status_code}: {resp.text}")
             return False
     except Exception as e:
         logger.error(f"Failed to send email to {to_email}: {e}")
