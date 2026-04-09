@@ -16,7 +16,7 @@ from werkzeug.utils import secure_filename
 from dotenv import load_dotenv, set_key
 from openpyxl import load_workbook
 
-from database import get_db, init_db, SVPCET_DEPARTMENTS
+from database import get_db, init_db, SVPCET_DEPARTMENTS, get_last_insert_id
 from email_service import (send_registration_email, send_vote_confirmation_email,
                             send_election_announcement, send_election_results,
                             send_care_response_email)
@@ -700,7 +700,7 @@ def complaint():
             "INSERT INTO complaints(name, email, roll_number, description, id_card_path) VALUES(?,?,?,?,?)",
             (name, email, roll_number, description, id_card_path)
         )
-        complaint_id = cur.lastrowid
+        complaint_id = get_last_insert_id(cur)
         db.commit()
         db.close()
 
@@ -1048,7 +1048,7 @@ def admin_election_create():
         "INSERT INTO elections(election_title, description, position_role, eligible_type, start_date, end_date, roll_start, roll_end) VALUES(?,?,?,?,?,?, '', '')",
         (title, description, position_role, eligible_type, start_date, end_date)
     )
-    election_id = cur.lastrowid
+    election_id = get_last_insert_id(cur)
 
     # ── Handle eligibility ──
     if eligible_type == 'department':
