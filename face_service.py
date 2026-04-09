@@ -105,8 +105,14 @@ def verify_face(stored_b64_encoding, live_b64_image, threshold=0.40):
     if live_enc is None:
         return False, None   # HF API unreachable or no face detected
 
-    # Cosine similarity (both embeddings are L2-normalised → dot product = cosine)
-    similarity = float(np.dot(stored_enc, live_enc))
+    # Cosine similarity (normalize vectors first)
+    stored_norm = np.linalg.norm(stored_enc)
+    live_norm = np.linalg.norm(live_enc)
+    
+    if stored_norm == 0 or live_norm == 0:
+        return False, 0.0
+
+    similarity = float(np.dot(stored_enc, live_enc) / (stored_norm * live_norm))
     matched = similarity >= threshold
     logger.info(f"Face verification: similarity={similarity:.3f}, matched={matched}")
     return matched, round(similarity, 3)
