@@ -17,12 +17,21 @@ def fetch_location(ip, lat=None, lon=None):
             if r_gps.status_code == 200:
                 data = r_gps.json()
                 address = data.get('address', {})
-                # Try to get city, town, or village
-                city = address.get('city') or address.get('town') or address.get('village') or ''
+                # Try to get the most specific locality available
+                city = (
+                    address.get('city_district') or
+                    address.get('suburb') or
+                    address.get('city') or 
+                    address.get('town') or 
+                    address.get('village') or 
+                    address.get('county') or
+                    address.get('state_district') or
+                    ''
+                )
                 state = address.get('state', '')
                 
                 if city or state:
-                    loc_str = f"{city}, {state}".strip(", ")
+                    loc_str = f"{city}, {state}" if city and state else (city or state)
                     return f"{loc_str} (GPS)"
                     
         # Fallback to IP-based location if GPS fails or isn't provided
