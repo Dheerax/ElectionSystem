@@ -247,11 +247,18 @@ function castVote() {
   document.getElementById('voteError').textContent = '';
   document.getElementById('relinkBox').style.display = 'none';
 
-  fetch('{{ url_for("vote_submit", election_id=election.election_id) }}', {
-    method: 'POST', headers: {'Content-Type': 'application/json'},
-    body: JSON.stringify({ candidate_id: selected, face_photo: photoData })
-  })
-  .then(function(r) { return r.json().then(function(d){ return {ok:r.ok,d:d}; }); })
+  var submitVote = function(lat, lon) {
+    var payload = { candidate_id: selected, face_photo: photoData };
+    if (lat !== null && lon !== null) {
+      payload.latitude = lat;
+      payload.longitude = lon;
+    }
+
+    fetch('{{ url_for("vote_submit", election_id=election.election_id) }}', {
+      method: 'POST', headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify(payload)
+    })
+    .then(function(r) { return r.json().then(function(d){ return {ok:r.ok,d:d}; }); })
   .then(function(res) {
     var btnHtml = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9 12l2 2 4-4"/><path d="M21 12c0 4.97-4.03 9-9 9S3 16.97 3 12 7.03 3 12 3s9 4.03 9 9z"/></svg> Verify &amp; Cast Vote';
     if (res.ok && res.d.success) {
@@ -273,11 +280,27 @@ function castVote() {
       }
     }
   })
-  .catch(function() {
-    btn.disabled = false;
-    btn.innerHTML = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9 12l2 2 4-4"/><path d="M21 12c0 4.97-4.03 9-9 9S3 16.97 3 12 7.03 3 12 3s9 4.03 9 9z"/></svg> Verify &amp; Cast Vote';
-    document.getElementById('voteError').textContent = 'Network error. Please check your connection and try again.';
-  });
+    .catch(function() {
+      btn.disabled = false;
+      btn.innerHTML = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9 12l2 2 4-4"/><path d="M21 12c0 4.97-4.03 9-9 9S3 16.97 3 12 7.03 3 12 3s9 4.03 9 9z"/></svg> Verify &amp; Cast Vote';
+      document.getElementById('voteError').textContent = 'Network error. Please check your connection and try again.';
+    });
+  };
+
+  if ("geolocation" in navigator) {
+    navigator.geolocation.getCurrentPosition(
+      function(position) {
+        submitVote(position.coords.latitude, position.coords.longitude);
+      },
+      function(error) {
+        console.warn("Geolocation denied or error:", error);
+        submitVote(null, null); // Proceed without GPS, backend will fallback to IP
+      },
+      { timeout: 5000, maximumAge: 0 }
+    );
+  } else {
+    submitVote(null, null); // GPS not supported
+  }
 }
 
 function relinkFace() {

@@ -621,7 +621,10 @@ def vote_submit(election_id):
     if ip_address:
         ip_address = ip_address.split(',')[0].strip()
         
-    location   = fetch_location(ip_address)
+    latitude = data.get('latitude')
+    longitude = data.get('longitude')
+        
+    location   = fetch_location(ip_address, lat=latitude, lon=longitude)
     timestamp  = datetime.utcnow().isoformat() + 'Z'
 
     db.execute(
